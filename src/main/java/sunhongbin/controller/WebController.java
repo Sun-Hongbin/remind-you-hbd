@@ -1,5 +1,7 @@
 package sunhongbin.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Controller;
@@ -8,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import sunhongbin.service.SmartRobotService;
 import sunhongbin.service.WeChatService;
+import sunhongbin.service.impl.WeChatServiceImpl;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -22,6 +25,8 @@ public class WebController {
 
     @Autowired
     private SmartRobotService smartRobotService;
+
+    private final Logger logger = LoggerFactory.getLogger(WeChatServiceImpl.class);
 
     /**
      * 第一次请求登陆微信时，就将该值锁住，直到有注销微信的指令到来
@@ -55,7 +60,12 @@ public class WebController {
         if(!locked.compareAndSet(false, true)) {
             return "不可重复登陆微信";
         }
-        weChatService.getUUID();
+
+        logger.info("开始获取UUID……");
+
+        String uuid = weChatService.getUUID();
+
+        logger.info("获取得到UUID成功，UUID：" + uuid);
 
         weChatService.showQRCode();
 

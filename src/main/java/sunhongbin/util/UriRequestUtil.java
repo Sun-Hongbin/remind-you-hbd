@@ -1,0 +1,116 @@
+package sunhongbin.util;
+
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * created by SunHongbin on 2020/4/28
+ */
+public class UriRequestUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(UriRequestUtil.class);
+
+    public static String deGet(String url, Map<String, String> paramsMap) {
+
+        // 1、Create Http Client Object and Response Object
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        CloseableHttpResponse response = null;
+        String requestResult = "";
+
+        try {
+            // 2、build URL and parameters to an URI
+            URIBuilder uriBuilder = new URIBuilder(url);
+            if (paramsMap != null) {
+                for (String paramKey : paramsMap.keySet()) {
+                    uriBuilder.addParameter(paramKey, paramsMap.get(paramKey));
+                }
+            }
+            URI uri = uriBuilder.build();
+
+            // 3、Get method
+            HttpGet httpGet = new HttpGet(uri);
+
+             response = httpClient.execute(httpGet);
+
+            // 4、analysis whether the HTTP return code is 200
+            if (response.getStatusLine().getStatusCode() == 200) {
+                logger.info("Get method success");
+                // parse message
+                // response.getEntity() output content: [Content-Type: text/javascript,Content-Length: 64,Chunked: false]
+                requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");
+            } else {
+                logger.error("Get method failed");
+            }
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+        } finally {
+            try {
+                if (response != null) {
+                    response.close();
+                }
+                httpClient.close();
+            } catch (IOException ioException) {
+                logger.error(ioException.getLocalizedMessage(), ioException);
+            }
+        }
+
+        return requestResult;
+    }
+
+    public static String doPost(String url, Map<String, String> paramsMap) {
+        // 1、Create Http Client Object and Response Object
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        CloseableHttpResponse response = null;
+        String requestResult = "";
+
+        try {
+            // 2、create post
+            HttpPost httpPost =new HttpPost(url);
+
+            // 3、create params List
+            if (paramsMap != null) {
+                List<NameValuePair> paramsList =new ArrayList<>();
+                for (String paramKey : paramsMap.keySet()) {
+                    paramsList.add(new BasicNameValuePair(paramKey, paramsMap.get(paramKey)));
+                }
+                // 4、simulate from entity
+                UrlEncodedFormEntity encodedFormEntity =new UrlEncodedFormEntity(paramsList, "UTF-8");
+                httpPost.setEntity(encodedFormEntity);
+            }
+
+            // 5、execute post request
+            response =httpClient.execute(httpPost);
+
+            requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");
+
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+        } finally {
+            try {
+                if (response != null) {
+                    response.close();
+                }
+                httpClient.close();
+            } catch (IOException ioException) {
+                logger.error(ioException.getLocalizedMessage(), ioException);
+            }
+        }
+        return requestResult;
+    }
+}

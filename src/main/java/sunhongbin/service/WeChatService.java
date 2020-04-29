@@ -13,7 +13,7 @@ public interface WeChatService {
     /**
      * 2、show QR code
      */
-    void showQRCode();
+    String showQRCode(String uuid);
 
     /**
      * 3、showLoginState

@@ -1,5 +1,6 @@
 package sunhongbin.util;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -10,10 +11,16 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.FileCopyUtils;
+import org.springframework.web.util.UriBuilder;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +53,7 @@ public class UriRequestUtil {
             // 3、Get method
             HttpGet httpGet = new HttpGet(uri);
 
-             response = httpClient.execute(httpGet);
+            response = httpClient.execute(httpGet);
 
             // 4、analysis whether the HTTP return code is 200
             if (response.getStatusLine().getStatusCode() == 200) {
@@ -81,21 +88,21 @@ public class UriRequestUtil {
 
         try {
             // 2、create post
-            HttpPost httpPost =new HttpPost(url);
+            HttpPost httpPost = new HttpPost(url);
 
             // 3、create params List
             if (paramsMap != null) {
-                List<NameValuePair> paramsList =new ArrayList<>();
+                List<NameValuePair> paramsList = new ArrayList<>();
                 for (String paramKey : paramsMap.keySet()) {
                     paramsList.add(new BasicNameValuePair(paramKey, paramsMap.get(paramKey)));
                 }
                 // 4、simulate from entity
-                UrlEncodedFormEntity encodedFormEntity =new UrlEncodedFormEntity(paramsList, "UTF-8");
+                UrlEncodedFormEntity encodedFormEntity = new UrlEncodedFormEntity(paramsList, "UTF-8");
                 httpPost.setEntity(encodedFormEntity);
             }
 
             // 5、execute post request
-            response =httpClient.execute(httpPost);
+            response = httpClient.execute(httpPost);
 
             requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");
 
@@ -112,5 +119,46 @@ public class UriRequestUtil {
             }
         }
         return requestResult;
+    }
+
+    public static File doGetFile(String url) {
+
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        CloseableHttpResponse response = null;
+        InputStream inputStream;
+
+        File file = null;
+
+        try {
+
+            URIBuilder uriBuilder = new URIBuilder(url);
+
+            URI uri = uriBuilder.build();
+
+            HttpGet httpGet = new HttpGet(uri);
+
+            response = httpClient.execute(httpGet);
+
+            if (response.getStatusLine().getStatusCode() == 200) {
+
+                // get entity
+                HttpEntity entity = response.getEntity();
+                inputStream = entity.getContent();
+                file = FileUtil.translateInputStreamToFile(inputStream, "qrCode");
+            }
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+        } finally {
+            try {
+                if (response != null) {
+                    response.close();
+                }
+                httpClient.close();
+            } catch (IOException ioException) {
+                logger.error(ioException.getLocalizedMessage(), ioException);
+            }
+        }
+
+        return file;
     }
 }

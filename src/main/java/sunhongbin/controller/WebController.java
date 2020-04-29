@@ -1,5 +1,6 @@
 package sunhongbin.controller;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,13 +34,16 @@ public class WebController {
      */
     private AtomicBoolean locked = new AtomicBoolean(false);
 
-
     private volatile static WebController instance = null;
 
-    private WebController() {};
+    private WebController() {
+    }
+
+    ;
 
     /**
      * 单例模式
+     *
      * @return
      */
     public static WebController getInstance() {
@@ -57,7 +61,7 @@ public class WebController {
     public String doAiMan() {
 
         // 第一次登陆时，将 false 置为 true，在没注销之前再次请求 UUID 都不会成功
-        if(!locked.compareAndSet(false, true)) {
+        if (!locked.compareAndSet(false, true)) {
             return "不可重复登陆微信";
         }
 
@@ -65,9 +69,14 @@ public class WebController {
 
         String uuid = weChatService.getUUID();
 
+        // release lock and remind user retry login operation
+        if (StringUtils.isEmpty(uuid)) {
+            locked = new AtomicBoolean(false);
+            return "获取UUID失败，请重试登陆";
+        }
         logger.info("获取得到UUID成功，UUID：" + uuid);
 
-        weChatService.showQRCode();
+        String qrCode = weChatService.showQRCode(uuid);
 
         weChatService.showLoginState();
 
@@ -77,16 +86,15 @@ public class WebController {
 
         weChatService.loadContactPerson();
 
-        return "成功登陆微信";
+        return qrCode;
     }
 
     @GetMapping(value = "logOut")
-    public String doLogOut () {
+    public String doLogOut() {
 
         locked = new AtomicBoolean(false);
         return "退出登陆";
     }
-
 
 
 }

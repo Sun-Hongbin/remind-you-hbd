@@ -37,6 +37,8 @@ public class WeChatServiceImpl implements WeChatService {
      *
      * 自己猜测隐藏的弊端：
      * 可能这个URL的格式（login.weixin.qq.com/l/）是一直在变的
+     * 优点：
+     * 减少一次URL请求
      */
     private final String loginWeChatUrl = "https://login.weixin.qq.com/l/";
 
@@ -93,11 +95,6 @@ public class WeChatServiceImpl implements WeChatService {
     @Override
     public String showQRCode(String uuid) {
 
-        // download QR code
-        String uri = getQrCodeUrl + "/" + uuid + "?t=webwx";
-
-        File file = UriRequestUtil.doGetFile(uri);
-
         // using Google open source ZXING tool
         Map<EncodeHintType, Object> hintMap = new EnumMap<EncodeHintType, Object>(EncodeHintType.class);
 
@@ -109,7 +106,7 @@ public class WeChatServiceImpl implements WeChatService {
 
         try {
             // qrContent: // https://login.weixin.qq.com/l/IYGBnzQjqA==
-            String qrContent = QRCodeUtil.translateFileToQrContent(file, hintMap);
+            String qrContent = loginWeChatUrl + uuid;
 
             // encode file to bit matrix
             QRCodeWriter qrCodeWriter = new QRCodeWriter();

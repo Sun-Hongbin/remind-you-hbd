@@ -2,18 +2,12 @@ package sunhongbin.util;
 
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
-import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import javax.imageio.ImageIO;
-import javax.swing.filechooser.FileSystemView;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
 /**
  * Created by Administrator on 2018/11/8 0008.
@@ -22,8 +16,8 @@ import java.util.Map;
 public class QRCodeUtil {
 
     /**
-     * 调用微信API获取到的登陆二维码，为inputStrean转化的File类型对象
-     * @param qrCodeFile
+     * 调用微信API获取到的登陆二维码信息，先转换成输入流后再转换成File
+     * @param qrCodeFile 为inputStrean转化的File类型对象
      * @param hintMap 谷歌二维码工具 ZXING 的属性配置
      * @return
      */

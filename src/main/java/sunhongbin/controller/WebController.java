@@ -8,6 +8,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import sunhongbin.service.SmartRobotService;
 import sunhongbin.service.WeChatService;
@@ -18,7 +19,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * created by SunHongbin on 2020/4/27
  */
-@RestController
+
+//@RestController 不能用这个，否则不能返回图片只能返回JSON
+@Controller
 public class WebController {
 
     @Autowired
@@ -38,8 +41,6 @@ public class WebController {
 
     private WebController() {
     }
-
-    ;
 
     /**
      * 单例模式
@@ -62,7 +63,8 @@ public class WebController {
 
         // 第一次登陆时，将 false 置为 true，在没注销之前再次请求 UUID 都不会成功
         if (!locked.compareAndSet(false, true)) {
-            return "不可重复登陆微信";
+            logger.error("不可重复登陆微信！");
+            return "index";
         }
 
         logger.info("开始获取UUID……");
@@ -72,11 +74,12 @@ public class WebController {
         // release lock and remind user retry login operation
         if (StringUtils.isEmpty(uuid)) {
             locked = new AtomicBoolean(false);
-            return "获取UUID失败，请重试登陆";
+            logger.error("获取UUID失败，请重试登陆……");
+            return "index";
         }
         logger.info("获取得到UUID成功，UUID：" + uuid);
 
-        String qrCode = weChatService.showQRCode(uuid);
+        weChatService.showQRCode(uuid);
 
         weChatService.showLoginState();
 
@@ -86,10 +89,11 @@ public class WebController {
 
         weChatService.loadContactPerson();
 
-        return qrCode;
+        return "index";
     }
 
     @GetMapping(value = "logOut")
+    @ResponseBody
     public String doLogOut() {
 
         locked = new AtomicBoolean(false);

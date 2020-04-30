@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import sunhongbin.service.WeChatService;
+import sunhongbin.util.FileUtil;
 import sunhongbin.util.QRCodeUtil;
 import sunhongbin.util.StringOperationUtil;
 import sunhongbin.util.UriRequestUtil;
@@ -62,8 +63,8 @@ public class WeChatServiceImpl implements WeChatService {
      * BACKGROUND_COLOR：二维码背景色，0xFFFFFF 表示白色
      * 演示用 16 进制表示，和前端页面 CSS 的取色是一样的，注意前后景颜色应该对比明显，如常见的黑白
      */
-    private static final int CODE_WIDTH = 1000;
-    private static final int CODE_HEIGHT = 10000;
+    private static final int CODE_WIDTH = 200;
+    private static final int CODE_HEIGHT = 200;
 
     @Override
     public String getUUID() {
@@ -105,18 +106,16 @@ public class WeChatServiceImpl implements WeChatService {
         hintMap.put(EncodeHintType.MARGIN, 1);
 
         try {
-            // qrContent: // https://login.weixin.qq.com/l/IYGBnzQjqA==
+            // qrContent: https://login.weixin.qq.com/l/IYGBnzQjqA==
             String qrContent = loginWeChatUrl + uuid;
 
             // encode file to bit matrix
             QRCodeWriter qrCodeWriter = new QRCodeWriter();
-
             BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, CODE_WIDTH, CODE_HEIGHT, hintMap);
 
             // translate into qrCode.png
-            Path path = new File("D:/qrCode.png").toPath();
+            Path path = new File(FileUtil.getImageFilePath("qrCode.png")).toPath();
             MatrixToImageWriter.writeToPath(bitMatrix, "png", path);
-
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
         }

@@ -69,6 +69,8 @@ public class WeChatServiceImpl implements WeChatService {
     @Override
     public String getUUID() {
 
+        logger.info("开始获取UUID……");
+
         Map<String, String> requestParamMap = new HashMap<>();
 
         requestParamMap.put("appid", "wx782c26e4c19acffb");
@@ -94,7 +96,7 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     @Override
-    public String showQRCode(String uuid) {
+    public void showQRCode(String uuid) {
 
         // using Google open source ZXING tool
         Map<EncodeHintType, Object> hintMap = new EnumMap<EncodeHintType, Object>(EncodeHintType.class);
@@ -119,7 +121,8 @@ public class WeChatServiceImpl implements WeChatService {
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
         }
-        return "成功获取二维码";
+
+        logger.info("成功获取二维码并展示给前端");
     }
 
     @Override

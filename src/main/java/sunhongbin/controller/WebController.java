@@ -67,8 +67,6 @@ public class WebController {
             return "index";
         }
 
-        logger.info("开始获取UUID……");
-
         String uuid = weChatService.getUUID();
 
         // release lock and remind user retry login operation

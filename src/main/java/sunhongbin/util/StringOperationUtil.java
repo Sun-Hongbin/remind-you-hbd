@@ -22,9 +22,24 @@ public class StringOperationUtil {
      * | 表示或者，一个竖线内就够了
      * () 括号在这里表示分组，实际不匹配任何字符，此处不要括号也可以
      *
+     *
+     * "\\s+" 正则表达式
+     *  正则表达式中\s匹配任何空白字符，包括空格、制表符、换页符等等, 等价于[ \f\n\r\t\v]
+     *
+     * \f -> 匹配一个换页
+     * \n -> 匹配一个换行符
+     * \r -> 匹配一个回车符
+     * \t -> 匹配一个制表符
+     * \v -> 匹配一个垂直制表符
+     * 而“\s+”则表示匹配任意多个上面的字符。另因为反斜杠在Java里是转义字符，所以在Java里，我们要这么用“\\s+”.
+     *
+     * 比如，当碰到想用空格来分割字符串时，就可以这样写：
+     * String[] s = str.split("\\s+")
+     *
      * 总结
      * \\d+||(\\d+\\.\\d+)  多个连续的容数字或者 多个连续的数+小数点+多个连续的数
      * (\\d+) 匹配多位数字，如200
+     *
      * 从文本中提取匹配符中的信息
      * @param inputText
      * @param regex
@@ -39,6 +54,6 @@ public class StringOperationUtil {
         if (matcher.find()) {
             return matcher.group(1);
         }
-        return null;
+        return "";
     }
 }

@@ -4,12 +4,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
 import sunhongbin.service.SmartRobotService;
 import sunhongbin.service.WeChatService;
 import sunhongbin.service.impl.WeChatServiceImpl;
@@ -79,7 +76,13 @@ public class WebController {
 
         weChatService.showQRCode(uuid);
 
-        weChatService.showLoginState();
+        try {
+            while (!StringUtils.equals(weChatService.chkLoginStatus(uuid), "200")){
+                Thread.sleep(2000);
+        }
+        } catch (InterruptedException e) {
+            logger.error(e.getLocalizedMessage(), e);
+        }
 
         weChatService.login();
 

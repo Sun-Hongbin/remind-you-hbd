@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import sunhongbin.service.WeChatService;
 import sunhongbin.util.FileUtil;
-import sunhongbin.util.QRCodeUtil;
 import sunhongbin.util.StringOperationUtil;
 import sunhongbin.util.UriRequestUtil;
 
@@ -35,7 +34,7 @@ public class WeChatServiceImpl implements WeChatService {
      * 获取登陆微信二维码方式1
      * 将 String (https://login.weixin.qq.com/l/{$UUID}) 转换成二维码
      * 扫描二维码，也就是扫描 https://login.weixin.qq.com/l/{$UUID}
-     *
+     * <p>
      * 自己猜测隐藏的弊端：
      * 可能这个URL的格式（login.weixin.qq.com/l/）是一直在变的
      * 优点：
@@ -51,10 +50,15 @@ public class WeChatServiceImpl implements WeChatService {
      * 将 File 中的内容解析成 String ： https://login.weixin.qq.com/l/{$UUID}
      * 将 String 转换成二维码
      * 扫描二维码，也就是扫描 https://login.weixin.qq.com/l/{$UUID}
-     *
      */
     private final String getQrCodeUrl = "https://login.weixin.qq.com/qrcode";
 
+    /**
+     * 尝试登录。若此时用户手机已完成扫码并点击登录，则返回一个真正用于登录的url地址。否则接口大概10s后返回未扫码或未登录的状态码
+     * 参数1 - tip : 1：未扫描 0：已扫描
+     * 参数2 - uuid
+     */
+    private final String chkIsLoginUrl = "https://login.weixin.qq.com/cgi-bin/mmwebwx-bin/login";
 
     /**
      * CODE_WIDTH：二维码宽度，单位像素
@@ -126,8 +130,38 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     @Override
-    public String showLoginState() {
-        return null;
+    public String chkLoginStatus(String uuid) {
+
+        Map<String, String> paramMap = new HashMap<>();
+        paramMap.put("tip", "1");
+        paramMap.put("uuid", uuid);
+
+        String requestRes = UriRequestUtil.deGet(chkIsLoginUrl, paramMap);
+
+        if (StringUtils.isEmpty(requestRes)) {
+            logger.error("扫描二维码失败");
+            return null;
+        }
+
+        // TODO 不以日志形式出现，将信息返回前端
+        String code = StringOperationUtil.stringExtract(requestRes, "window.code=(\\d+);");
+        if (StringUtils.isEmpty(code)) {
+
+            logger.error("无法从返回报文中获取返回码！");
+
+        } else if (StringUtils.equals(code, "201")) {
+
+            logger.error("扫描成功，请点击确认按钮!");
+
+        } else if (StringUtils.equals(code, "200")) {
+
+            logger.info("扫描成功，正在登陆，请稍候……");
+
+        } else if (Integer.parseInt(code) >= 400) {
+
+            logger.error("HTTP 返回码 >= 400：" + code);
+        }
+        return code;
     }
 
     @Override

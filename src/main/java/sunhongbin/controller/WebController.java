@@ -77,7 +77,7 @@ public class WebController {
         weChatService.showQRCode(uuid);
 
         try {
-            while (!StringUtils.equals(weChatService.chkLoginStatus(uuid), "200")){
+            while (!StringUtils.equals(weChatService.pollForScanRes(uuid), "200")){
                 Thread.sleep(2000);
         }
         } catch (InterruptedException e) {

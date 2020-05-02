@@ -9,8 +9,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import sunhongbin.enums.QrCodeProperties;
+import sunhongbin.enums.WeChatApiUrl;
 import sunhongbin.service.WeChatService;
 import sunhongbin.util.FileUtil;
+import sunhongbin.util.QRCodeUtil;
 import sunhongbin.util.StringOperationUtil;
 import sunhongbin.util.UriRequestUtil;
 
@@ -28,47 +31,10 @@ public class WeChatServiceImpl implements WeChatService {
 
     private final Logger logger = LoggerFactory.getLogger(WeChatServiceImpl.class);
 
-    private final String getUUIDUrl = "https://login.weixin.qq.com/jslogin";
-
     /**
-     * 获取登陆微信二维码方式1
-     * 将 String (https://login.weixin.qq.com/l/{$UUID}) 转换成二维码
-     * 扫描二维码，也就是扫描 https://login.weixin.qq.com/l/{$UUID}
-     * <p>
-     * 自己猜测隐藏的弊端：
-     * 可能这个URL的格式（login.weixin.qq.com/l/）是一直在变的
-     * 优点：
-     * 减少一次URL请求
+     * 存放通过报文解析出来的 redirect_uri，base_uri，webpush_url
      */
-    private final String loginWeChatUrl = "https://login.weixin.qq.com/l/";
-
-    /**
-     * 获取登陆微信二维码方式2
-     * 先发送请求：https://login.weixin.qq.com/qrcode/{$UUID}
-     * 微信返回我们 URL（InputStream），内容为 https://login.weixin.qq.com/l/{$UUID}
-     * 将微信返回给我们的 InputStream 转换为 File
-     * 将 File 中的内容解析成 String ： https://login.weixin.qq.com/l/{$UUID}
-     * 将 String 转换成二维码
-     * 扫描二维码，也就是扫描 https://login.weixin.qq.com/l/{$UUID}
-     */
-    private final String getQrCodeUrl = "https://login.weixin.qq.com/qrcode";
-
-    /**
-     * 尝试登录。若此时用户手机已完成扫码并点击登录，则返回一个真正用于登录的url地址。否则接口大概10s后返回未扫码或未登录的状态码
-     * 参数1 - tip : 1：未扫描 0：已扫描
-     * 参数2 - uuid
-     */
-    private final String chkIsLoginUrl = "https://login.weixin.qq.com/cgi-bin/mmwebwx-bin/login";
-
-    /**
-     * CODE_WIDTH：二维码宽度，单位像素
-     * CODE_HEIGHT：二维码高度，单位像素
-     * FRONT_COLOR：二维码前景色，0x000000 表示黑色
-     * BACKGROUND_COLOR：二维码背景色，0xFFFFFF 表示白色
-     * 演示用 16 进制表示，和前端页面 CSS 的取色是一样的，注意前后景颜色应该对比明显，如常见的黑白
-     */
-    private static final int CODE_WIDTH = 200;
-    private static final int CODE_HEIGHT = 200;
+    private Map<String, String> urlMap;
 
     @Override
     public String getUUID() {
@@ -77,11 +43,14 @@ public class WeChatServiceImpl implements WeChatService {
 
         Map<String, String> requestParamMap = new HashMap<>();
 
+        // 固定为wx782c26e4c19acffb
         requestParamMap.put("appid", "wx782c26e4c19acffb");
+        // 固定为new
         requestParamMap.put("fun", "new");
+        // 语言格式
         requestParamMap.put("lang", "zh_CN");
 
-        String result = UriRequestUtil.deGet(getUUIDUrl, requestParamMap);
+        String result = UriRequestUtil.deGet(WeChatApiUrl.GET_UUID.getUrl(), requestParamMap);
 
         String uuid = "";
 
@@ -102,8 +71,13 @@ public class WeChatServiceImpl implements WeChatService {
     @Override
     public void showQRCode(String uuid) {
 
+        // download QR code
+        String uri = WeChatApiUrl.GET_QR_CODE.getUrl() + "/" + uuid + "?t=webwx";
+
+        File file = UriRequestUtil.doGetFile(uri);
+
         // using Google open source ZXING tool
-        Map<EncodeHintType, Object> hintMap = new EnumMap<EncodeHintType, Object>(EncodeHintType.class);
+        Map<EncodeHintType, Object> hintMap = new EnumMap<>(EncodeHintType.class);
 
         hintMap.put(EncodeHintType.CHARACTER_SET, "UTF-8");
         //默认的容错级别是L,代码中注释是7，设置成M/H的话二维码就越长了
@@ -112,12 +86,14 @@ public class WeChatServiceImpl implements WeChatService {
         hintMap.put(EncodeHintType.MARGIN, 1);
 
         try {
-            // qrContent: https://login.weixin.qq.com/l/IYGBnzQjqA==
-            String qrContent = loginWeChatUrl + uuid;
+            // qrContent: // https://login.weixin.qq.com/l/IYGBnzQjqA==
+            String qrContent = QRCodeUtil.translateFileToQrContent(file, hintMap);
 
             // encode file to bit matrix
             QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, CODE_WIDTH, CODE_HEIGHT, hintMap);
+            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE,
+                    QrCodeProperties.QR_CODE_WIDTH.getValue(),
+                    QrCodeProperties.QR_CODE_HEIGHT.getValue(), hintMap);
 
             // translate into qrCode.png
             Path path = new File(FileUtil.getImageFilePath("qrCode.png")).toPath();
@@ -130,13 +106,20 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     @Override
-    public String chkLoginStatus(String uuid) {
+    public String pollForScanRes(String uuid) {
 
         Map<String, String> paramMap = new HashMap<>();
+        // 参数tip : 1表示未扫描 0表示已扫描
         paramMap.put("tip", "1");
         paramMap.put("uuid", uuid);
 
-        String requestRes = UriRequestUtil.deGet(chkIsLoginUrl, paramMap);
+        /**
+         * response：
+         * window.code 扫描结果，201表示扫描成功，200表示确认登录，还有一个408，表示超时（一直没有扫码）
+         * window.userAvatar用户头像base64编码
+         * window.redirect_uri获取初始化信息的重定向Url
+         */
+        String requestRes = UriRequestUtil.deGet(WeChatApiUrl.IS_SCAN_QR_CODE.getUrl(), paramMap);
 
         if (StringUtils.isEmpty(requestRes)) {
             logger.error("扫描二维码失败");
@@ -157,7 +140,14 @@ public class WeChatServiceImpl implements WeChatService {
 
             logger.info("扫描成功，正在登陆，请稍候……");
 
-        } else if (Integer.parseInt(code) >= 400) {
+            // 扫描成功则根据返回结果，解析返回的包括redirect_uri并获取一系列的URL，base_uri，webpush_url
+            getUrlMap(requestRes);
+
+        } else if (StringUtils.equals(code, "408")) {
+
+            logger.error("登陆超时（您一直没有扫码）!");
+
+        }else {
 
             logger.error("HTTP 返回码 >= 400：" + code);
         }
@@ -181,6 +171,14 @@ public class WeChatServiceImpl implements WeChatService {
 
     @Override
     public void logOutWeChat() {
+
+    }
+
+    private void getUrlMap(String requestRes) {
+        urlMap = new HashMap<>();
+
+
+
 
     }
 }

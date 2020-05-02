@@ -16,9 +16,10 @@ public interface WeChatService {
     void showQRCode(String uuid);
 
     /**
-     * 3、check whether scan the QR code and press login button
+     * 3、Polling for scan results
+     * check whether scan the QR code and press login button by polling
      */
-    String chkLoginStatus(String uuid);
+    String pollForScanRes(String uuid);
 
     /**
      * 4、Login

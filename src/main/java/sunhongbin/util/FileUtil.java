@@ -48,11 +48,37 @@ public class FileUtil {
         }
     }
 
+    public static byte[] translateInputStreamToByte(InputStream inputStream) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        byte[] buffer = new byte[1024];
+
+        int length = 0;
+
+        try {
+            while ((length = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, length);
+            }
+        } catch (IOException ioException) {
+            logger.error(ioException.getLocalizedMessage(), ioException);
+        } finally {
+            try {
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+            } catch (IOException ioException) {
+                logger.error(ioException.getLocalizedMessage(), ioException);
+            }
+        }
+        return outputStream.toByteArray();
+    }
+
     /**
      * spring boot 获取static文件夹路径
+     *
      * @return
      */
-    public static String getImageFilePath(String fileName)  {
+    public static String getImageFilePath(String fileName) {
 
         String path = "";
         try {
@@ -70,7 +96,6 @@ public class FileUtil {
         }
         return path;
     }
-
 
 
 }

@@ -6,6 +6,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,9 +19,14 @@ import sunhongbin.util.StringOperationUtil;
 import sunhongbin.util.UriRequestUtil;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,9 +38,9 @@ public class WeChatServiceImpl implements WeChatService {
     private final Logger logger = LoggerFactory.getLogger(WeChatServiceImpl.class);
 
     /**
-     * 存放通过报文解析出来的 redirect_uri，base_uri，webpush_url
+     * 存放请求redirect_uri获得的公参
      */
-    private Map<String, String> urlMap;
+    private Map<String, String> globalParamsMap;
 
     @Override
     public String getUUID() {
@@ -140,14 +146,13 @@ public class WeChatServiceImpl implements WeChatService {
 
             logger.info("扫描成功，正在登陆，请稍候……");
 
-            // 扫描成功则根据返回结果，解析返回的包括redirect_uri并获取一系列的URL，base_uri，webpush_url
-            getUrlMap(requestRes);
+            setGlobalParams(requestRes);
 
         } else if (StringUtils.equals(code, "408")) {
 
             logger.error("登陆超时（您一直没有扫码）!");
 
-        }else {
+        } else {
 
             logger.error("HTTP 返回码 >= 400：" + code);
         }
@@ -174,11 +179,31 @@ public class WeChatServiceImpl implements WeChatService {
 
     }
 
-    private void getUrlMap(String requestRes) {
-        urlMap = new HashMap<>();
+    private void setGlobalParams(String requestRes) {
 
+        // 公共参数集合
+        this.globalParamsMap = new HashMap<>();
 
+        // res: window.code=200;\nwindow.redirect_uri="https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxnewloginpage?ticket=Ab6YXYE91BuiEBIfL9YJ8w-k@qrticket_0&uuid=4ZrteSt-zg==&lang=zh_CN&scan=1588342601";
+        String redirect_uri = StringOperationUtil.stringExtract(requestRes, "window.redirect_uri=\"(\\S+?)\";") + "&fun=new";
 
+        // 扫描成功则根据返回结果，解析返回的包括redirect_uri并获取一系列的URL，base_uri，webpush_url
+        if (StringUtils.isEmpty(redirect_uri)) {
+            logger.error("获取重定向 URL 失败");
+            return;
+        }
 
+        String xml = UriRequestUtil.doGetGlobalParams(redirect_uri);
+
+        if (StringUtils.isEmpty(xml)) {
+            globalParamsMap.put("skey", xml.substring(xml.indexOf("<skey>") + "<skey>".length(), xml.indexOf("</skey>")));
+            globalParamsMap.put("wxSid", xml.substring(xml.indexOf("<wxSid>") + "<skey>".length(), xml.indexOf("</wxSid>")));
+            globalParamsMap.put("wxUin", xml.substring(xml.indexOf("<wxUin>") + "<skey>".length(), xml.indexOf("</wxUin>")));
+            globalParamsMap.put("pass_ticket", xml.substring(xml.indexOf("<pass_ticket>") + "<skey>".length(), xml.indexOf("</pass_ticket>")));
+        } else {
+            throw new IllegalArgumentException("参数解析错误");
+        }
     }
+
+
 }

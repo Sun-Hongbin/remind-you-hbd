@@ -21,7 +21,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -158,7 +161,43 @@ public class UriRequestUtil {
                 logger.error(ioException.getLocalizedMessage(), ioException);
             }
         }
-
         return file;
     }
+
+    public static String doGetGlobalParams(String uri) {
+
+        URL url = null;
+
+        StringBuilder session = new StringBuilder();
+
+        try {
+            url = new URL(uri);
+        } catch (MalformedURLException e) {
+            logger.error(e.getLocalizedMessage(), e);
+            return "";
+        }
+
+        try {
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("Cookie", session.toString());
+            connection.setRequestProperty("Connection", "keep-alive");
+            connection.connect();
+
+            List<String> list = connection.getHeaderFields().get("Set-Cookie");
+            if (list != null && list.size() != 0) {
+                for (String cookie : list) {
+                    session.append(cookie.substring(0, cookie.indexOf(";") + 1));
+                }
+            }
+            if (connection.getResponseCode() == 200) {
+                // 将InputStreamReader转化成byte[]
+                return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), "UTF-8");
+            }
+        } catch (IOException ioException) {
+            logger.error(ioException.getLocalizedMessage(), ioException);
+        }
+        return "";
+    }
+
+
 }

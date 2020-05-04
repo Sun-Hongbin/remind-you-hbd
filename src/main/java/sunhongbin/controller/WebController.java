@@ -84,8 +84,6 @@ public class WebController {
             logger.error(e.getLocalizedMessage(), e);
         }
 
-        weChatService.login();
-
         weChatService.initializeweChat();
 
         weChatService.loadContactPerson();

@@ -22,22 +22,33 @@ public interface WeChatService {
     String pollForScanRes(String uuid);
 
     /**
-     * 4、Login
-     */
-    boolean login();
-
-    /**
-     * 5、initialize weChat
+     * 4、initialize weChat
      */
     void initializeweChat();
 
     /**
-     * 6、load contact person
+     * 5、WeChat Msg status notify
+     */
+    void wxStatusNotify();
+
+    /**
+     * 5、load contact person
      */
     boolean loadContactPerson();
 
     /**
-     * 7、Logout WeChat
+     * listening in message
+     */
+    void listeningInMsg();
+
+    /**
+     * send message
+     */
+    void sendMsgToWeChatFriend();
+
+    /**
+     * Logout WeChat
      */
     void logOutWeChat();
+
 }

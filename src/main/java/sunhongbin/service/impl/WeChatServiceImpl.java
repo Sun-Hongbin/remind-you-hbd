@@ -1,33 +1,27 @@
 package sunhongbin.service.impl;
 
+import com.alibaba.fastjson.JSONObject;
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import sunhongbin.entity.User;
 import sunhongbin.enums.QrCodeProperties;
-import sunhongbin.enums.WeChatApiUrl;
+import sunhongbin.enums.WeChatApi;
 import sunhongbin.service.WeChatService;
 import sunhongbin.util.FileUtil;
 import sunhongbin.util.QRCodeUtil;
 import sunhongbin.util.StringOperationUtil;
-import sunhongbin.util.UriRequestUtil;
+import sunhongbin.util.HttpUtil;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Path;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * created by SunHongbin on 2020/4/27
@@ -41,6 +35,12 @@ public class WeChatServiceImpl implements WeChatService {
      * 存放请求redirect_uri获得的公参
      */
     private Map<String, String> globalParamsMap;
+
+    private JSONObject baseRequest = new JSONObject();
+
+    private User user;
+
+    private JSONObject SyncKey;
 
     @Override
     public String getUUID() {
@@ -56,7 +56,7 @@ public class WeChatServiceImpl implements WeChatService {
         // 语言格式
         requestParamMap.put("lang", "zh_CN");
 
-        String result = UriRequestUtil.deGet(WeChatApiUrl.GET_UUID.getUrl(), requestParamMap);
+        String result = HttpUtil.deGet(WeChatApi.GET_UUID.getUrl(), requestParamMap);
 
         String uuid = "";
 
@@ -78,9 +78,9 @@ public class WeChatServiceImpl implements WeChatService {
     public void showQRCode(String uuid) {
 
         // download QR code
-        String uri = WeChatApiUrl.GET_QR_CODE.getUrl() + "/" + uuid + "?t=webwx";
+        String uri = WeChatApi.GET_QR_CODE.getUrl() + "/" + uuid + "?t=webwx";
 
-        File file = UriRequestUtil.doGetFile(uri);
+        File file = HttpUtil.doGetFile(uri);
 
         // using Google open source ZXING tool
         Map<EncodeHintType, Object> hintMap = new EnumMap<>(EncodeHintType.class);
@@ -125,7 +125,7 @@ public class WeChatServiceImpl implements WeChatService {
          * window.userAvatar用户头像base64编码
          * window.redirect_uri获取初始化信息的重定向Url
          */
-        String requestRes = UriRequestUtil.deGet(WeChatApiUrl.IS_SCAN_QR_CODE.getUrl(), paramMap);
+        String requestRes = HttpUtil.deGet(WeChatApi.IS_SCAN_QR_CODE.getUrl(), paramMap);
 
         if (StringUtils.isEmpty(requestRes)) {
             logger.error("扫描二维码失败");
@@ -160,18 +160,74 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     @Override
-    public boolean login() {
-        return false;
+    public void initializeweChat() {
+
+        //初始化微信首页栏的联系人、公众号等（不是通讯录里的联系人），初始化登录者自己的信息（包括昵称等），初始化同步消息所用的SycnKey
+        String url = WeChatApi.WEB_WX_INIT.getUrl() + "?r=" + (~System.currentTimeMillis()) +
+                "pass_ticket" + globalParamsMap.get("pass_ticket");
+
+        JSONObject param = new JSONObject();
+
+        param.put("BaseRequest", baseRequest);
+
+        String res = HttpUtil.doPost(url, param);
+
+        JSONObject jsonRes = JSONObject.parseObject(res);
+
+        JSONObject user = jsonRes.getJSONObject("User");
+        this.user = new User(user);
+        this.SyncKey = jsonRes.getJSONObject("SyncKey");
+
+        //TODO logger转前端
+        logger.info("微信初始化成功，欢迎登陆：" + this.user.getNickName());
     }
 
     @Override
-    public void initializeweChat() {
+    public void wxStatusNotify() {
+        String url = WeChatApi.WX_STATUS_NOTIFY.getUrlWithParam() + globalParamsMap.get("pass_ticket");
 
+        JSONObject paramJson = new JSONObject();
+        paramJson.put("BaseRequest", baseRequest);
+        paramJson.put("Code", 3);
+        paramJson.put("FromUserName", this.user.getUserName());
+        paramJson.put("ToUserName", this.user.getUserName());
+        paramJson.put("ClientMsgId", System.currentTimeMillis());
+
+        HttpUtil.doPost(url, paramJson);
+
+        // TODO 处理BaseResponse
     }
 
     @Override
     public boolean loadContactPerson() {
+
+        String url = WeChatApi.GET_CONTACT.getUrl() +
+                "?pass_ticket=" + globalParamsMap.get("pass_ticket") + "&skey=" + globalParamsMap.get("skey") +
+                "&r=" + System.currentTimeMillis();
+
+        JSONObject paramJson = new JSONObject();
+        paramJson.put("BaseRequest", baseRequest);
+        HttpUtil.doPost(url, paramJson);
+
+        // TODO 解析用户信息
+
         return false;
+    }
+
+    @Override
+    public void listeningInMsg() {
+
+        // 1、chk msg
+
+        // 2、if data, sync msg
+
+        // 3、handle msg and send Msg To WeChat Friend
+
+    }
+
+    @Override
+    public void sendMsgToWeChatFriend() {
+
     }
 
     @Override
@@ -193,15 +249,24 @@ public class WeChatServiceImpl implements WeChatService {
             return;
         }
 
-        String xml = UriRequestUtil.doGetGlobalParams(redirect_uri);
+        String xml = HttpUtil.doGetGlobalParams(redirect_uri);
 
-        if (StringUtils.isEmpty(xml)) {
+        if (!StringUtils.isEmpty(xml)) {
             globalParamsMap.put("skey", xml.substring(xml.indexOf("<skey>") + "<skey>".length(), xml.indexOf("</skey>")));
             globalParamsMap.put("wxSid", xml.substring(xml.indexOf("<wxSid>") + "<skey>".length(), xml.indexOf("</wxSid>")));
             globalParamsMap.put("wxUin", xml.substring(xml.indexOf("<wxUin>") + "<skey>".length(), xml.indexOf("</wxUin>")));
             globalParamsMap.put("pass_ticket", xml.substring(xml.indexOf("<pass_ticket>") + "<skey>".length(), xml.indexOf("</pass_ticket>")));
         } else {
             throw new IllegalArgumentException("参数解析错误");
+        }
+
+        if (globalParamsMap.size() != 0) {
+            baseRequest.put("Skey", globalParamsMap.get("skey"));
+            baseRequest.put("Sid", globalParamsMap.get("wxSid"));
+            baseRequest.put("Uin", globalParamsMap.get("wxUin"));
+            baseRequest.put("DeviceID", "e" + String.valueOf(new Random().nextLong()).substring(1, 16));
+        } else {
+            throw new IllegalArgumentException("全局参数为空");
         }
     }
 

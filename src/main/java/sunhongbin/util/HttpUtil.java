@@ -1,5 +1,6 @@
 package sunhongbin.util;
 
+import com.alibaba.fastjson.JSONObject;
 import org.apache.http.HttpEntity;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -11,20 +12,18 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.FileCopyUtils;
-import org.springframework.web.util.UriBuilder;
 
+import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,9 +31,11 @@ import java.util.Map;
 /**
  * created by SunHongbin on 2020/4/28
  */
-public class UriRequestUtil {
+public class HttpUtil {
 
-    private static final Logger logger = LoggerFactory.getLogger(UriRequestUtil.class);
+    private static final Logger logger = LoggerFactory.getLogger(HttpUtil.class);
+
+    private static StringBuilder sessions = new StringBuilder();
 
     public static String deGet(String url, Map<String, String> paramsMap) {
 
@@ -83,45 +84,37 @@ public class UriRequestUtil {
         return requestResult;
     }
 
-    public static String doPost(String url, Map<String, String> paramsMap) {
-        // 1、Create Http Client Object and Response Object
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-        CloseableHttpResponse response = null;
-        String requestResult = "";
+    public static String doGetGlobalParams(String uri) {
+
+        URL url = null;
 
         try {
-            // 2、create post
-            HttpPost httpPost = new HttpPost(url);
-
-            // 3、create params List
-            if (paramsMap != null) {
-                List<NameValuePair> paramsList = new ArrayList<>();
-                for (String paramKey : paramsMap.keySet()) {
-                    paramsList.add(new BasicNameValuePair(paramKey, paramsMap.get(paramKey)));
-                }
-                // 4、simulate from entity
-                UrlEncodedFormEntity encodedFormEntity = new UrlEncodedFormEntity(paramsList, "UTF-8");
-                httpPost.setEntity(encodedFormEntity);
-            }
-
-            // 5、execute post request
-            response = httpClient.execute(httpPost);
-
-            requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");
-
-        } catch (Exception e) {
+            url = new URL(uri);
+        } catch (MalformedURLException e) {
             logger.error(e.getLocalizedMessage(), e);
-        } finally {
-            try {
-                if (response != null) {
-                    response.close();
-                }
-                httpClient.close();
-            } catch (IOException ioException) {
-                logger.error(ioException.getLocalizedMessage(), ioException);
-            }
+            return "";
         }
-        return requestResult;
+
+        try {
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("Cookie", sessions.toString());
+            connection.setRequestProperty("Connection", "keep-alive");
+            connection.connect();
+
+            List<String> list = connection.getHeaderFields().get("Set-Cookie");
+            if (list != null && list.size() != 0) {
+                for (String cookie : list) {
+                    sessions.append(cookie.substring(0, cookie.indexOf(";") + 1));
+                }
+            }
+            if (connection.getResponseCode() == 200) {
+                // 将InputStreamReader转化成byte[]
+                return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), "UTF-8");
+            }
+        } catch (IOException ioException) {
+            logger.error(ioException.getLocalizedMessage(), ioException);
+        }
+        return "";
     }
 
     public static File doGetFile(String url) {
@@ -164,39 +157,84 @@ public class UriRequestUtil {
         return file;
     }
 
-    public static String doGetGlobalParams(String uri) {
-
-        URL url = null;
-
-        StringBuilder session = new StringBuilder();
+    public static String doPost(String url, Map<String, String> paramsMap) {
+        // 1、Create Http Client Object and Response Object
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        CloseableHttpResponse response = null;
+        String requestResult = "";
 
         try {
-            url = new URL(uri);
+            // 2、create post
+            HttpPost httpPost = new HttpPost(url);
+
+            // 3、create params List
+            if (paramsMap != null) {
+                List<NameValuePair> paramsList = new ArrayList<>();
+                for (String paramKey : paramsMap.keySet()) {
+                    paramsList.add(new BasicNameValuePair(paramKey, paramsMap.get(paramKey)));
+                }
+                // 4、simulate from entity
+                UrlEncodedFormEntity encodedFormEntity = new UrlEncodedFormEntity(paramsList, "UTF-8");
+                httpPost.setEntity(encodedFormEntity);
+            }
+
+            // 5、execute post request
+            response = httpClient.execute(httpPost);
+
+            requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");
+
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+        } finally {
+            try {
+                if (response != null) {
+                    response.close();
+                }
+                httpClient.close();
+            } catch (IOException ioException) {
+                logger.error(ioException.getLocalizedMessage(), ioException);
+            }
+        }
+        return requestResult;
+    }
+
+    public static String doPost(String url, JSONObject jsonObject) {
+        URL urlEntity = null;
+
+        try {
+           new URL(url);
         } catch (MalformedURLException e) {
             logger.error(e.getLocalizedMessage(), e);
-            return "";
         }
 
         try {
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestProperty("Cookie", session.toString());
-            connection.setRequestProperty("Connection", "keep-alive");
+            HttpURLConnection connection = (HttpURLConnection)urlEntity.openConnection();
+
+            connection.setRequestMethod("POST");
+
+            connection.setRequestProperty("Cookie", sessions.toString());
+            connection.setRequestProperty("Charset", "UTF-8");
+            connection.setRequestProperty("Content-Type","application/json;charset=UTF-8");
+
+            connection.setDoOutput(true);
+            connection.setDoInput(true);
+            connection.setUseCaches(false);
+
             connection.connect();
 
-            List<String> list = connection.getHeaderFields().get("Set-Cookie");
-            if (list != null && list.size() != 0) {
-                for (String cookie : list) {
-                    session.append(cookie.substring(0, cookie.indexOf(";") + 1));
-                }
-            }
-            if (connection.getResponseCode() == 200) {
-                // 将InputStreamReader转化成byte[]
-                return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), "UTF-8");
-            }
-        } catch (IOException ioException) {
-            logger.error(ioException.getLocalizedMessage(), ioException);
+            DataOutputStream outputStream =new DataOutputStream(connection.getOutputStream());
+
+            outputStream.write(jsonObject.toString().getBytes(StandardCharsets.UTF_8));
+
+            outputStream.flush();
+
+            outputStream.close();
+
+            return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            logger.error(e.getLocalizedMessage(), e);
         }
-        return "";
+        return null;
     }
 
 

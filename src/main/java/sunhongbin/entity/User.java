@@ -1,10 +1,14 @@
 package sunhongbin.entity;
 
 import com.alibaba.fastjson.JSONObject;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * created by SunHongbin on 2020/5/4
  */
+@Getter
+@Setter
 public class User {
 
     private int uin;
@@ -15,64 +19,26 @@ public class User {
 
     private String headImgUrl;
 
+    private String sexInEnglins;
+
     private int sex;
 
     private String signature;
 
     public User(JSONObject jsonObject) {
-        uin = jsonObject.getInteger("Uin");
-        userName = jsonObject.getString("UserName");
-        nickName = jsonObject.getString("NickName");
-        headImgUrl = jsonObject.getString("HeadImgUrl");
-        this.sex = jsonObject.getInteger("HeadImgUrl");
-        signature = jsonObject.getString("Signature");
+        this.uin = jsonObject.getInteger("Uin");
+        this.userName = jsonObject.getString("UserName");
+        this.nickName = jsonObject.getString("NickName");
+        this.headImgUrl = jsonObject.getString("HeadImgUrl");
+        this.signature = jsonObject.getString("Signature");
+        this.sex = jsonObject.getInteger("Sex");
+        if (1 == sex) {
+            this.sexInEnglins = "male";
+        } else if (0 == sex) {
+            this.sexInEnglins = "female";
+        } else {
+            this.sexInEnglins = "unknown";
+        }
     }
 
-    public int getUin() {
-        return uin;
-    }
-
-    public void setUin(int uin) {
-        this.uin = uin;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public String getNickName() {
-        return nickName;
-    }
-
-    public void setNickName(String nickName) {
-        this.nickName = nickName;
-    }
-
-    public String getHeadImgUrl() {
-        return headImgUrl;
-    }
-
-    public void setHeadImgUrl(String headImgUrl) {
-        this.headImgUrl = headImgUrl;
-    }
-
-    public int getSex() {
-        return sex;
-    }
-
-    public void setSex(int sex) {
-        this.sex = sex;
-    }
-
-    public String getSignature() {
-        return signature;
-    }
-
-    public void setSignature(String signature) {
-        this.signature = signature;
-    }
 }

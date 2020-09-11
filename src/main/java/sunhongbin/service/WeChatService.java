@@ -1,5 +1,7 @@
 package sunhongbin.service;
 
+import sunhongbin.enums.MemberTypeEnum;
+
 /**
  * created by SunHongbin on 2020/4/27
  */
@@ -29,7 +31,7 @@ public interface WeChatService {
     /**
      * 5、WeChat Msg status notify
      */
-    void wxStatusNotify();
+    boolean wxStatusNotify();
 
     /**
      * 5、load contact person
@@ -44,11 +46,7 @@ public interface WeChatService {
     /**
      * send message
      */
-    void sendMsgToWeChatFriend();
+    void sendMsgToWeChatFriend(String msg, MemberTypeEnum toWho);
 
-    /**
-     * Logout WeChat
-     */
-    void logOutWeChat();
 
 }

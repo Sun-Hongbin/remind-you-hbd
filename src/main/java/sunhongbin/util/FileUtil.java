@@ -25,7 +25,7 @@ public class FileUtil {
 
             byte[] buffer = new byte[1024];
 
-            int length = 0;
+            int length;
 
             while ((length = inputStream.read(buffer)) != -1) {
                 outputStream.write(buffer, 0, length);
@@ -44,8 +44,8 @@ public class FileUtil {
             } catch (IOException ioException) {
                 logger.error(ioException.getLocalizedMessage(), ioException);
             }
-            return file;
         }
+        return file;
     }
 
     public static byte[] translateInputStreamToByte(InputStream inputStream) {
@@ -53,9 +53,8 @@ public class FileUtil {
 
         byte[] buffer = new byte[1024];
 
-        int length = 0;
-
         try {
+            int length;
             while ((length = inputStream.read(buffer)) != -1) {
                 outputStream.write(buffer, 0, length);
             }
@@ -88,8 +87,7 @@ public class FileUtil {
                 path = path.concat("/" + fileName);
             }
 
-            path = path.substring(1, path.length());
-
+            path = path.substring(1);
 
         } catch (FileNotFoundException fileNotFoundException) {
             logger.error(fileNotFoundException.getLocalizedMessage(), fileNotFoundException);

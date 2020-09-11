@@ -5,4 +5,10 @@ package sunhongbin.service;
  */
 public interface SmartRobotService {
 
+    void listeningInMsg();
+
+    void sendMsgToWeChatFriend();
+
+    void notifyDrinkWater();
+
 }

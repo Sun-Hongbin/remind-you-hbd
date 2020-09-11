@@ -86,16 +86,8 @@ public class HttpUtil {
 
     public static String doGetGlobalParams(String uri) {
 
-        URL url = null;
-
         try {
-            url = new URL(uri);
-        } catch (MalformedURLException e) {
-            logger.error(e.getLocalizedMessage(), e);
-            return "";
-        }
-
-        try {
+            URL url = new URL(uri);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestProperty("Cookie", sessions.toString());
             connection.setRequestProperty("Connection", "keep-alive");
@@ -104,12 +96,12 @@ public class HttpUtil {
             List<String> list = connection.getHeaderFields().get("Set-Cookie");
             if (list != null && list.size() != 0) {
                 for (String cookie : list) {
-                    sessions.append(cookie.substring(0, cookie.indexOf(";") + 1));
+                    sessions.append(cookie, 0, cookie.indexOf(";") + 1);
                 }
             }
             if (connection.getResponseCode() == 200) {
                 // 将InputStreamReader转化成byte[]
-                return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), "UTF-8");
+                return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), StandardCharsets.UTF_8);
             }
         } catch (IOException ioException) {
             logger.error(ioException.getLocalizedMessage(), ioException);
@@ -198,16 +190,20 @@ public class HttpUtil {
         return requestResult;
     }
 
-    public static String doPost(String url, JSONObject jsonObject) {
-        URL urlEntity = null;
+    /**
+     *
+     * @param url
+     * @param jsonObject
+     * "DeviceID" -> "e878871051103203"
+     * "Skey" -> "@crypt_1af1bef4_ce420e20a91faba907fd24b254d414a0"
+     * "Uin" -> "1469893904"
+     * "Sid" -> "O0Uy9JLwXSVEFXY4"
+     * @return
+     */
+    public static String doPost(String url, JSONObject jsonObject) throws IOException {
 
-        try {
-           new URL(url);
-        } catch (MalformedURLException e) {
-            logger.error(e.getLocalizedMessage(), e);
-        }
+            URL urlEntity = new URL(url);
 
-        try {
             HttpURLConnection connection = (HttpURLConnection)urlEntity.openConnection();
 
             connection.setRequestMethod("POST");
@@ -224,6 +220,9 @@ public class HttpUtil {
 
             DataOutputStream outputStream =new DataOutputStream(connection.getOutputStream());
 
+            /**
+             * {"BaseRequest":{"DeviceID":"e878871051103203","Skey":"@crypt_1af1bef4_ce420e20a91faba907fd24b254d414a0","Uin":"1469893904","Sid":"O0Uy9JLwXSVEFXY4"}}
+             */
             outputStream.write(jsonObject.toString().getBytes(StandardCharsets.UTF_8));
 
             outputStream.flush();
@@ -231,10 +230,6 @@ public class HttpUtil {
             outputStream.close();
 
             return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            logger.error(e.getLocalizedMessage(), e);
-        }
-        return null;
     }
 
 

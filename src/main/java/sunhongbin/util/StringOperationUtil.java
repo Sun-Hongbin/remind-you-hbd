@@ -45,7 +45,7 @@ public class StringOperationUtil {
      * @param regex
      * @return
      */
-    public static String stringExtract(String inputText, String regex) {
+    public static String match(String inputText, String regex) {
 
         Pattern pattern = Pattern.compile(regex);
 

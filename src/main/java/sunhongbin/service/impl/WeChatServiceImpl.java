@@ -19,10 +19,7 @@ import sunhongbin.enums.MemberTypeEnum;
 import sunhongbin.enums.QrCodeProperties;
 import sunhongbin.enums.WeChatApi;
 import sunhongbin.service.WeChatService;
-import sunhongbin.util.FileUtil;
-import sunhongbin.util.QRCodeUtil;
-import sunhongbin.util.StringOperationUtil;
-import sunhongbin.util.HttpUtil;
+import sunhongbin.util.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -191,6 +188,8 @@ public class WeChatServiceImpl implements WeChatService {
 
         this.SyncKey = jsonRes.getJSONObject("SyncKey");
 
+        logger.info("[SyncKey] " + SyncKey.toJSONString());
+
         //TODO logger转前端
         logger.info("微信初始化成功，欢迎登陆：" + this.user.getNickName());
     }
@@ -246,6 +245,7 @@ public class WeChatServiceImpl implements WeChatService {
             int ret = baseResponse.getInteger("Ret");
             if (0 == ret) {
                 JSONArray memberList = jsonRes.getJSONArray("MemberList");
+                JSONArray friendList = new JSONArray();
                 memberList.forEach(member -> {
                     JSONObject msg = (JSONObject)member;
                     if (msg.getInteger("VerifyFlag") != null
@@ -254,9 +254,12 @@ public class WeChatServiceImpl implements WeChatService {
                             // 群聊不加载
                             && !msg.getString("UserName").contains("@@")
                             // 自己不加载
-                            && StringUtils.equals(msg.getString("UserName"), user.getUserName())
+                            && !StringUtils.equals(msg.getString("UserName"), user.getUserName())
                     ) {
-                        contactLst.add(member);
+//                        System.out.println("姓名：" + msg.getString("NickName") + "  个性签名：" + msg.getString("Signature"));
+                        friendList.add(msg);
+                        contactLst = friendList;
+                        logger.info("共有联系人数量：" + contactLst.size());
                     }
                 });
                 return true;
@@ -279,7 +282,7 @@ public class WeChatServiceImpl implements WeChatService {
 
         singleThreadPool.execute(()-> {
                     while (true) {
-                        String url = WeChatApi.SYNC_CHK.getUrl();
+                        synccheck();
                     }
                 });
         singleThreadPool.shutdown();
@@ -289,6 +292,23 @@ public class WeChatServiceImpl implements WeChatService {
         // 2、if data, sync msg
 
         // 3、handle msg and send Msg To WeChat Friend
+    }
+
+    private void synccheck() {
+        String url = WeChatApi.SYNC_CHK.getUrl();
+
+        Map<String, String> paramMap = new HashMap<>();
+        paramMap.put("r", RamdonIdUtil.getRandomIdWithUsrNam(user.getNickName()));
+        paramMap.put("skey", globalParamsMap.get("skey"));
+        paramMap.put("sid", globalParamsMap.get("wxSid"));
+        paramMap.put("uin", globalParamsMap.get("wxUin"));
+        paramMap.put("deviceid", "e" + String.valueOf(new Random().nextLong()).substring(1, 16));
+        paramMap.put("synckey", SyncKey.toJSONString());
+        paramMap.put("_", RamdonIdUtil.getRandomIdWithUsrNam(user.getNickName()));
+
+        String res = HttpUtil.deGet(url, paramMap);
+
+        System.out.println(res);
 
     }
 
@@ -309,7 +329,7 @@ public class WeChatServiceImpl implements WeChatService {
 
         JSONObject paramJson = new JSONObject();
         JSONObject MsgJson = new JSONObject();
-        String id = DigestUtils.md5Hex(UUID.randomUUID().toString());
+        String id = RamdonIdUtil.getRandomIdWithUsrNam(user.getUserName());
         MsgJson.put("Type", 1);
         MsgJson.put("Content", msg);
         MsgJson.put("FromUserName", user.getUserName());

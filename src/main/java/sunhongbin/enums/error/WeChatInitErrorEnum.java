@@ -10,7 +10,9 @@ public enum WeChatInitErrorEnum {
     /**
      * [微信状态提醒] 开启失败
      */
-    INIT_ERROR_STATUS_NOTIFY_FAILED("[微信状态提醒] 开启失败");
+    INIT_ERROR_STATUS_NOTIFY_FAILED("[微信状态提醒] 开启失败"),
+
+    LOAD_CONTACT_PERSON_FAILED("加载联系人失败");
     
     @Getter
     private String desc;

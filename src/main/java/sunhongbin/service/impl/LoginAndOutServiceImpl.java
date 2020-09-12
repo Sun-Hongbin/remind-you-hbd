@@ -11,6 +11,7 @@ import sunhongbin.service.WeChatService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static sunhongbin.enums.error.WeChatInitErrorEnum.INIT_ERROR_STATUS_NOTIFY_FAILED;
+import static sunhongbin.enums.error.WeChatInitErrorEnum.LOAD_CONTACT_PERSON_FAILED;
 
 /**
  * created by SunHongbin on 2020/9/10
@@ -28,11 +29,10 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
      */
     private AtomicBoolean locked = new AtomicBoolean(false);
 
-    private String uuid;
-
     @Override
     public String doLogin() {
-        uuid = weChatService.getUUID();
+
+        String uuid = weChatService.getUUID();
 
         // release lock and remind user retry login operation
         if (StringUtils.isEmpty(uuid)) {
@@ -63,11 +63,15 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
 
         weChatService.initializeweChat();
 
-        if (weChatService.wxStatusNotify()) {
+        if (!weChatService.wxStatusNotify()) {
             logger.error(INIT_ERROR_STATUS_NOTIFY_FAILED.getDesc());
         }
 
-        weChatService.loadContactPerson();
+        if (!weChatService.loadContactPerson()) {
+            logger.error(LOAD_CONTACT_PERSON_FAILED.getDesc());
+        }
+
+        weChatService.listeningInMsg();
 
         return "success";
     }

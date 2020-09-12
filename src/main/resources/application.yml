@@ -1,7 +1,6 @@
 spring:
   thymeleaf:
-    mode: HTML5
-
+    mode: HTML
 schedule:
   satisfy:
     #每分钟执行一次

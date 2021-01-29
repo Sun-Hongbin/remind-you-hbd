@@ -22,7 +22,7 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
     @Autowired
     private WeChatService weChatService;
 
-    private final Logger logger = LoggerFactory.getLogger(LoginAndOutServiceImpl.class);
+    private static final Logger LOG = LoggerFactory.getLogger(LoginAndOutServiceImpl.class);
 
     /**
      * 第一次请求登陆微信时，就将该值锁住，直到有注销微信的指令到来
@@ -39,7 +39,7 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
             locked = new AtomicBoolean(false);
             return "获取UUID失败，请重试登陆……";
         }
-        logger.info("获取得到UUID成功，UUID：" + uuid);
+        LOG.info("获取得到UUID成功，UUID：" + uuid);
 
         weChatService.showQRCode(uuid);
 
@@ -52,7 +52,7 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
                 Thread.sleep(2000);
             }
         } catch (InterruptedException e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOG.error(e.getLocalizedMessage(), e);
         }
 
         // 登录成功后就把登录标志置为true
@@ -64,11 +64,11 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
         weChatService.initializeweChat();
 
         if (!weChatService.wxStatusNotify()) {
-            logger.error(INIT_ERROR_STATUS_NOTIFY_FAILED.getDesc());
+            LOG.error(INIT_ERROR_STATUS_NOTIFY_FAILED.getDesc());
         }
 
         if (!weChatService.loadContactPerson()) {
-            logger.error(LOAD_CONTACT_PERSON_FAILED.getDesc());
+            LOG.error(LOAD_CONTACT_PERSON_FAILED.getDesc());
         }
 
         weChatService.listeningInMsg();

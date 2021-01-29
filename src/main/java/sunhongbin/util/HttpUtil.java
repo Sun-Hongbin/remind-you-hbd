@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -33,7 +32,7 @@ import java.util.Map;
  */
 public class HttpUtil {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpUtil.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HttpUtil.class);
 
     private static StringBuilder sessions = new StringBuilder();
 
@@ -61,15 +60,15 @@ public class HttpUtil {
 
             // 4、analysis whether the HTTP return code is 200
             if (response.getStatusLine().getStatusCode() == 200) {
-                logger.info("Get method success");
+                LOG.info("Get method success");
                 // parse message
                 // response.getEntity() output content: [Content-Type: text/javascript,Content-Length: 64,Chunked: false]
                 requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");
             } else {
-                logger.error("Get method failed");
+                LOG.error("Get method failed");
             }
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOG.error(e.getLocalizedMessage(), e);
         } finally {
             try {
                 if (response != null) {
@@ -77,7 +76,7 @@ public class HttpUtil {
                 }
                 httpClient.close();
             } catch (IOException ioException) {
-                logger.error(ioException.getLocalizedMessage(), ioException);
+                LOG.error(ioException.getLocalizedMessage(), ioException);
             }
         }
 
@@ -104,7 +103,7 @@ public class HttpUtil {
                 return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), StandardCharsets.UTF_8);
             }
         } catch (IOException ioException) {
-            logger.error(ioException.getLocalizedMessage(), ioException);
+            LOG.error(ioException.getLocalizedMessage(), ioException);
         }
         return "";
     }
@@ -135,7 +134,7 @@ public class HttpUtil {
                 file = FileUtil.translateInputStreamToFile(inputStream, "qrCode");
             }
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOG.error(e.getLocalizedMessage(), e);
         } finally {
             try {
                 if (response != null) {
@@ -143,7 +142,7 @@ public class HttpUtil {
                 }
                 httpClient.close();
             } catch (IOException ioException) {
-                logger.error(ioException.getLocalizedMessage(), ioException);
+                LOG.error(ioException.getLocalizedMessage(), ioException);
             }
         }
         return file;
@@ -176,7 +175,7 @@ public class HttpUtil {
             requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");
 
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOG.error(e.getLocalizedMessage(), e);
         } finally {
             try {
                 if (response != null) {
@@ -184,7 +183,7 @@ public class HttpUtil {
                 }
                 httpClient.close();
             } catch (IOException ioException) {
-                logger.error(ioException.getLocalizedMessage(), ioException);
+                LOG.error(ioException.getLocalizedMessage(), ioException);
             }
         }
         return requestResult;

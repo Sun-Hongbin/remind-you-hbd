@@ -12,7 +12,7 @@ import java.io.*;
  */
 public class FileUtil {
 
-    private static final Logger logger = LoggerFactory.getLogger(FileUtil.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FileUtil.class);
 
     public static File translateInputStreamToFile(InputStream inputStream, String fileName) {
 
@@ -31,7 +31,7 @@ public class FileUtil {
                 outputStream.write(buffer, 0, length);
             }
         } catch (IOException ioException) {
-            logger.error(ioException.getLocalizedMessage(), ioException);
+            LOG.error(ioException.getLocalizedMessage(), ioException);
         } finally {
             try {
                 if (inputStream != null) {
@@ -42,7 +42,7 @@ public class FileUtil {
                     outputStream.close();
                 }
             } catch (IOException ioException) {
-                logger.error(ioException.getLocalizedMessage(), ioException);
+                LOG.error(ioException.getLocalizedMessage(), ioException);
             }
         }
         return file;
@@ -59,14 +59,14 @@ public class FileUtil {
                 outputStream.write(buffer, 0, length);
             }
         } catch (IOException ioException) {
-            logger.error(ioException.getLocalizedMessage(), ioException);
+            LOG.error(ioException.getLocalizedMessage(), ioException);
         } finally {
             try {
                 if (inputStream != null) {
                     inputStream.close();
                 }
             } catch (IOException ioException) {
-                logger.error(ioException.getLocalizedMessage(), ioException);
+                LOG.error(ioException.getLocalizedMessage(), ioException);
             }
         }
         return outputStream.toByteArray();
@@ -90,7 +90,7 @@ public class FileUtil {
             path = path.substring(1);
 
         } catch (FileNotFoundException fileNotFoundException) {
-            logger.error(fileNotFoundException.getLocalizedMessage(), fileNotFoundException);
+            LOG.error(fileNotFoundException.getLocalizedMessage(), fileNotFoundException);
         }
         return path;
     }

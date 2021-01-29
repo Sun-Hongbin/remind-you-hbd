@@ -1,0 +1,14 @@
+spring:
+  thymeleaf:
+    mode: HTML
+
+schedule:
+  satisfy:
+    #每分钟执行一次
+    drinkWater: 1 * * * * ?
+    #每天6点执行一次
+    whether: 0 0 6 ? * *
+
+thread-pool:
+  corePoolSize: 10
+  maximumPoolSize: 10

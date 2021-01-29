@@ -1,5 +1,7 @@
 package sunhongbin.service;
 
+import sunhongbin.enums.MemberTypeEnum;
+
 /**
  * created by SunHongbin on 2020/4/27
  */
@@ -13,30 +15,38 @@ public interface WeChatService {
     /**
      * 2、show QR code
      */
-    void showQRCode();
+    void showQRCode(String uuid);
 
     /**
-     * 3、showLoginState
+     * 3、Polling for scan results
+     * check whether scan the QR code and press login button by polling
      */
-    String showLoginState();
+    String pollForScanRes(String uuid);
 
     /**
-     * 4、Login
-     */
-    boolean login();
-
-    /**
-     * 5、initialize weChat
+     * 4、initialize weChat
      */
     void initializeweChat();
 
     /**
-     * 6、load contact person
+     * 5、WeChat Msg status notify
+     */
+    boolean wxStatusNotify();
+
+    /**
+     * 5、load contact person
      */
     boolean loadContactPerson();
 
     /**
-     * 7、Logout WeChat
+     * listening in message
      */
-    void logOutWeChat();
+    void listeningInMsg();
+
+    /**
+     * send message
+     */
+    void sendMsgToWeChatFriend(String msg, MemberTypeEnum toWho);
+
+
 }

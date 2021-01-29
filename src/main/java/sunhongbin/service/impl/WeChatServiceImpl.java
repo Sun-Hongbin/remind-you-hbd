@@ -196,7 +196,7 @@ public class WeChatServiceImpl implements WeChatService {
 
     @Override
     public boolean wxStatusNotify() {
-        String url = WeChatApi.WX_STATUS_NOTIFY.getUrl() +"?lang=zh_CN&pass_ticket=" + globalParamsMap.get("pass_ticket");
+        String url = WeChatApi.WX_STATUS_NOTIFY.getUrl() + "?lang=zh_CN&pass_ticket=" + globalParamsMap.get("pass_ticket");
 
         JSONObject paramJson = new JSONObject();
         paramJson.put("BaseRequest", baseRequest);
@@ -247,7 +247,7 @@ public class WeChatServiceImpl implements WeChatService {
                 JSONArray memberList = jsonRes.getJSONArray("MemberList");
                 JSONArray friendList = new JSONArray();
                 memberList.forEach(member -> {
-                    JSONObject msg = (JSONObject)member;
+                    JSONObject msg = (JSONObject) member;
                     if (msg.getInteger("VerifyFlag") != null
                             // 公众号或者服务号不加载(0: 人, 8: 公众号, 24: 服务号)
                             && msg.getInteger("VerifyFlag") != 8 && msg.getInteger("VerifyFlag") != 24
@@ -271,34 +271,34 @@ public class WeChatServiceImpl implements WeChatService {
     @Override
     public void listeningInMsg() {
 
-        executorService.execute(()-> {
-                    while (true) {
-                        int[] syncRes = synccheck();
-                        if (syncRes.length != 2) {
-                            LOG.error("接收错误");
-                            break;
+        executorService.execute(() -> {
+            while (true) {
+                int[] syncRes = synccheck();
+                if (syncRes.length != 2) {
+                    LOG.error("接收错误");
+                    break;
+                }
+                if (syncRes[0] == SyncCheckRetCodeEnum.SUCCESS.getIndex()) {
+                    if (syncRes[1] == SyncChecSelectorEnum.NEW_MSG.getIndex() || syncRes[1] == SyncChecSelectorEnum.ADD_OR_DEL_CONTACT.getIndex()) {
+                        webwxSync();
+                        sendMsgToWeChatFriend("", MemberTypeEnum.GROUP);
+                    } else if (syncRes[1] == SyncChecSelectorEnum.NORMAL.getIndex()) {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            LOG.error(e.getLocalizedMessage());
                         }
-                        if (syncRes[0] == SyncCheckRetCodeEnum.SUCCESS.getIndex()) {
-                            if (syncRes[1] == SyncChecSelectorEnum.NEW_MSG.getIndex() || syncRes[1] == SyncChecSelectorEnum.ADD_OR_DEL_CONTACT.getIndex()) {
-                                webwxSync();
-                                sendMsgToWeChatFriend("",MemberTypeEnum.GROUP);
-                            } else if (syncRes[1] == SyncChecSelectorEnum.NORMAL.getIndex()) {
-                                try {
-                                    Thread.sleep(100);
-                                } catch (InterruptedException e) {
-                                    LOG.error(e.getLocalizedMessage());
-                                }
-                            } else if (syncRes[1] == SyncChecSelectorEnum.MOD_CONTACT.getIndex()) {
-                                LOG.info(SyncChecSelectorEnum.MOD_CONTACT.getDesc());
-                            }
-                        } else {
-                            LOG.error("returnCode: " + SyncCheckRetCodeEnum.stateOf(syncRes[0]).getDesc() +
-                                         " selector: " + SyncChecSelectorEnum.stateOf(syncRes[1]).getDesc());
-                            break;
-                        }
-
+                    } else if (syncRes[1] == SyncChecSelectorEnum.MOD_CONTACT.getIndex()) {
+                        LOG.info(SyncChecSelectorEnum.MOD_CONTACT.getDesc());
                     }
-                });
+                } else {
+                    LOG.error("returnCode: " + SyncCheckRetCodeEnum.stateOf(syncRes[0]).getDesc() +
+                            " selector: " + SyncChecSelectorEnum.stateOf(syncRes[1]).getDesc());
+                    break;
+                }
+
+            }
+        });
 
         // 1、chk msg
 
@@ -331,7 +331,8 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     private JSONObject webwxSync() {
-        String url = WeChatApi.SYNC_MSG.getUrl() + "?lang=zh_CN"
+        String url = WeChatApi.SYNC_MSG.getUrl()
+                + "?lang=zh_CN"
                 + "&pass_ticket=" + globalParamsMap.get("pass_ticket")
                 + "&skey=" + globalParamsMap.get("skey")
                 + "&sid=" + globalParamsMap.get("wxSid")
@@ -358,7 +359,6 @@ public class WeChatServiceImpl implements WeChatService {
 
             }
         }
-
 
 
         return null;

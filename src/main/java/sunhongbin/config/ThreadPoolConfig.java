@@ -18,7 +18,7 @@ public class ThreadPoolConfig {
     @Value("${thread-pool.corePoolSize:10}")
     private int corePoolSize;
 
-    @Value("&{thread-pool.maximumPoolSize:10}")
+    @Value("${thread-pool.maximumPoolSize:10}")
     private int maximumPoolSize;
 
     @Bean

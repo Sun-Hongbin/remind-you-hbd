@@ -19,7 +19,7 @@ public class User {
 
     private String headImgUrl;
 
-    private String sexInEnglins;
+    private String sexInEnglish;
 
     private int sex;
 
@@ -33,11 +33,11 @@ public class User {
         this.signature = jsonObject.getString("Signature");
         this.sex = jsonObject.getInteger("Sex");
         if (1 == sex) {
-            this.sexInEnglins = "male";
+            this.sexInEnglish = "male";
         } else if (0 == sex) {
-            this.sexInEnglins = "female";
+            this.sexInEnglish = "female";
         } else {
-            this.sexInEnglins = "unknown";
+            this.sexInEnglish = "unknown";
         }
     }
 

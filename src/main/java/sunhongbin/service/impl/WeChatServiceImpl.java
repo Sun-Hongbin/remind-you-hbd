@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import sunhongbin.entity.User;
 import sunhongbin.enums.*;
+import sunhongbin.exception.WeChatException;
 import sunhongbin.service.WeChatService;
 import sunhongbin.util.*;
 
@@ -23,6 +24,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
+
+import static sunhongbin.enums.error.InitErrorEnum.*;
 
 /**
  * created by SunHongbin on 2020/4/27
@@ -49,7 +52,7 @@ public class WeChatServiceImpl implements WeChatService {
     private String sendToGroup, sendToSomeone;
 
     @Override
-    public String getUUID() {
+    public String getUUID() throws WeChatException {
 
         LOG.info("开始获取UUID……");
 
@@ -74,14 +77,16 @@ public class WeChatServiceImpl implements WeChatService {
                 uuid = StringOperationUtil.match(result, "window.QRLogin.uuid = \"(.*)\";");
                 return uuid;
             } else {
-                LOG.error("获取UUID码报错，错误码：" + code);
+                throw new WeChatException("获取UUID码报错，错误码：" + code);
             }
         }
         return uuid;
     }
 
     @Override
-    public void showQRCode(String uuid) {
+    public void showQRCode(String uuid) throws WeChatException {
+
+        LOG.info("开始获取登陆微信二维码……");
 
         // download QR code
         String uri = WeChatApi.GET_QR_CODE.getUrl() + "/" + uuid + "?t=webwx";
@@ -111,14 +116,15 @@ public class WeChatServiceImpl implements WeChatService {
             Path path = new File(FileUtil.getImageFilePath("qrCode.png")).toPath();
             MatrixToImageWriter.writeToPath(bitMatrix, "png", path);
         } catch (Exception e) {
-            LOG.error(e.getLocalizedMessage(), e);
+            throw new WeChatException("二维码获取失败: " + e.getMessage());
         }
-
-        LOG.info("二维码成功保存到本地！");
+        LOG.info("二维码获取成功！已保存到本地！");
     }
 
     @Override
-    public String pollForScanRes(String uuid) {
+
+
+    public void pollForScanRes(String uuid) {
 
         Map<String, String> paramMap = new HashMap<>();
         // 参数tip : 1表示未扫描 0表示已扫描
@@ -133,7 +139,6 @@ public class WeChatServiceImpl implements WeChatService {
 
         if (StringUtils.isEmpty(requestRes)) {
             LOG.error("扫描二维码失败");
-            return null;
         }
 
         // TODO 不以日志形式出现，将信息返回前端
@@ -144,7 +149,7 @@ public class WeChatServiceImpl implements WeChatService {
 
         } else if (StringUtils.equals(code, "201")) {
 
-            LOG.error("扫描成功，请点击确认按钮!");
+            LOG.info("扫描成功，请点击确认按钮!");
 
         } else if (StringUtils.equals(code, "200")) {
 
@@ -160,11 +165,20 @@ public class WeChatServiceImpl implements WeChatService {
 
             LOG.error("HTTP 返回码：" + code);
         }
-        return code;
+
+        while (!StringUtils.equals(code, "200")) {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                LOG.error(e.getLocalizedMessage());
+            }
+        }
     }
 
     @Override
     public void initializeweChat() {
+
+        LOG.info("开始初始化微信……");
 
         //初始化微信首页栏的联系人、公众号等（不是通讯录里的联系人），初始化登录者自己的信息（包括昵称等），初始化同步消息所用的SycnKey
         String url = WeChatApi.WEB_WX_INIT.getUrl() + "?r=" + (~System.currentTimeMillis()) + "pass_ticket" + globalParamsMap.get("pass_ticket");
@@ -191,11 +205,14 @@ public class WeChatServiceImpl implements WeChatService {
         LOG.info("[SyncKey] " + SyncKey.toJSONString());
 
         //TODO logger转前端
-        LOG.info("微信初始化成功，欢迎登陆：" + this.user.getNickName());
+        LOG.info("初始化成功，欢迎登陆!" + this.user.toString());
     }
 
     @Override
-    public boolean wxStatusNotify() {
+    public void wxStatusNotify() throws WeChatException {
+
+        LOG.info("开启微信状态通知……");
+
         String url = WeChatApi.WX_STATUS_NOTIFY.getUrl() + "?lang=zh_CN&pass_ticket=" + globalParamsMap.get("pass_ticket");
 
         JSONObject paramJson = new JSONObject();
@@ -208,8 +225,7 @@ public class WeChatServiceImpl implements WeChatService {
         try {
             res = HttpUtil.doPost(url, paramJson);
         } catch (IOException e) {
-            LOG.error(e.getLocalizedMessage());
-            return false;
+            throw new WeChatException(WX_STATUS_NOTIFY_EXCEPTION.getDesc(), e);
         }
 
         JSONObject jsonRes = JSON.parseObject(res);
@@ -217,13 +233,17 @@ public class WeChatServiceImpl implements WeChatService {
         if (null != baseResponse) {
             int ret = baseResponse.getInteger("Ret");
             // ret为0则开启成功
-            return ret == 0;
+            LOG.info("微信状态提醒开启成功");
+            if (ret != 0) {
+                throw new WeChatException(INIT_ERROR_STATUS_NOTIFY_FAILED.getDesc());
+            }
         }
-        return false;
     }
 
     @Override
-    public boolean loadContactPerson() {
+    public void loadContactPerson() throws WeChatException {
+
+        LOG.info("开始加载联系人……");
 
         String url = WeChatApi.GET_CONTACT.getUrl() +
                 "?pass_ticket=" + globalParamsMap.get("pass_ticket") + "&skey=" + globalParamsMap.get("skey") +
@@ -231,19 +251,18 @@ public class WeChatServiceImpl implements WeChatService {
 
         JSONObject paramJson = new JSONObject();
         paramJson.put("BaseRequest", baseRequest);
-        String res;
+        String res = "";
         try {
             res = HttpUtil.doPost(url, paramJson);
         } catch (IOException e) {
-            LOG.error(e.getLocalizedMessage());
-            return false;
+            throw new WeChatException(LOAD_CONTACT_PERSON_EXCEPTION.getDesc(), e);
         }
 
         JSONObject jsonRes = JSON.parseObject(res);
         JSONObject baseResponse = jsonRes.getJSONObject("BaseResponse");
-        if (null != baseResponse) {
+        if (baseResponse != null) {
             int ret = baseResponse.getInteger("Ret");
-            if (0 == ret) {
+            if (ret == 0) {
                 JSONArray memberList = jsonRes.getJSONArray("MemberList");
                 JSONArray friendList = new JSONArray();
                 memberList.forEach(member -> {
@@ -256,24 +275,26 @@ public class WeChatServiceImpl implements WeChatService {
                             // 自己不加载
                             && !StringUtils.equals(msg.getString("UserName"), user.getUserName())
                     ) {
-//                        System.out.println("姓名：" + msg.getString("NickName") + "  个性签名：" + msg.getString("Signature"));
+                        LOG.info("姓名：" + msg.getString("NickName") + "  个性签名：" + msg.getString("Signature"));
                         friendList.add(msg);
                         contactLst = friendList;
                     }
                 });
-                LOG.info("共有联系人数量：" + contactLst.size());
-                return true;
+                LOG.info("联系人加载成功！共有联系人数量：" + contactLst.size());
             }
+        } else {
+            throw new WeChatException(LOAD_CONTACT_PERSON_FAILED.getDesc() + "：返回码不等于0");
         }
-        return false;
     }
 
     @Override
     public void listeningInMsg() {
 
+        LOG.info("开始监听消息……");
+
         executorService.execute(() -> {
             while (true) {
-                int[] syncRes = synccheck();
+                int[] syncRes = syncCheck();
                 if (syncRes.length != 2) {
                     LOG.error("接收错误");
                     break;
@@ -307,7 +328,7 @@ public class WeChatServiceImpl implements WeChatService {
         // 3、handle msg and send Msg To WeChat Friend
     }
 
-    private int[] synccheck() {
+    private int[] syncCheck() {
         String url = WeChatApi.SYNC_CHK.getUrl();
 
         Map<String, String> paramMap = new HashMap<>();
@@ -347,7 +368,7 @@ public class WeChatServiceImpl implements WeChatService {
         try {
             response = HttpUtil.doPost(url, paramJon);
         } catch (IOException e) {
-            LOG.error(e.getLocalizedMessage());
+            throw new WeChatException(SYNC_MSG_EXCEPTION.getDesc(), e);
         }
 
         JSONObject resJson = JSON.parseObject(response);
@@ -359,8 +380,6 @@ public class WeChatServiceImpl implements WeChatService {
 
             }
         }
-
-
         return null;
     }
 
@@ -396,8 +415,7 @@ public class WeChatServiceImpl implements WeChatService {
         try {
             res = HttpUtil.doPost(url, paramJson);
         } catch (IOException e) {
-            LOG.error(e.getLocalizedMessage());
-            return;
+            throw new WeChatException(SND_MSG_EXCEPTION.getDesc(), e);
         }
 
         LOG.info("[sendMsgToWeChatFriend] " + res);

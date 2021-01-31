@@ -26,7 +26,7 @@ public class WebController {
     private volatile static WebController instance = null;
 
     @GetMapping(value = "/login")
-    public String doAiMan() {
+    public String doAiMan() throws Exception {
         String returnMsg = loginAndOutService.doLogin();
         System.out.println(returnMsg);
         return "index";

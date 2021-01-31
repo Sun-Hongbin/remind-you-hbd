@@ -5,13 +5,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import sunhongbin.exception.WeChatException;
 import sunhongbin.service.LoginAndOutService;
 import sunhongbin.service.WeChatService;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static sunhongbin.enums.error.WeChatInitErrorEnum.INIT_ERROR_STATUS_NOTIFY_FAILED;
-import static sunhongbin.enums.error.WeChatInitErrorEnum.LOAD_CONTACT_PERSON_FAILED;
 
 /**
  * created by SunHongbin on 2020/9/10
@@ -30,11 +28,11 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
     private AtomicBoolean locked = new AtomicBoolean(false);
 
     @Override
-    public String doLogin() {
+    public String doLogin() throws WeChatException {
 
         String uuid = weChatService.getUUID();
 
-        // release lock and remind user retry login operation
+        // release lock and remind the user to login again
         if (StringUtils.isEmpty(uuid)) {
             locked = new AtomicBoolean(false);
             return "获取UUID失败，请重试登陆……";
@@ -43,17 +41,7 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
 
         weChatService.showQRCode(uuid);
 
-        if (StringUtils.isBlank(uuid)) {
-            System.out.println("请先获取二维码~");
-            return "请先获取二维码~";
-        }
-        try {
-            while (!StringUtils.equals(weChatService.pollForScanRes(uuid), "200")){
-                Thread.sleep(2000);
-            }
-        } catch (InterruptedException e) {
-            LOG.error(e.getLocalizedMessage(), e);
-        }
+        weChatService.pollForScanRes(uuid);
 
         // 登录成功后就把登录标志置为true
         // 第一次登陆时，将 false 置为 true，在没注销之前再次请求 UUID 都不会成功
@@ -63,13 +51,9 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
 
         weChatService.initializeweChat();
 
-        if (!weChatService.wxStatusNotify()) {
-            LOG.error(INIT_ERROR_STATUS_NOTIFY_FAILED.getDesc());
-        }
+        weChatService.wxStatusNotify();
 
-        if (!weChatService.loadContactPerson()) {
-            LOG.error(LOAD_CONTACT_PERSON_FAILED.getDesc());
-        }
+        weChatService.loadContactPerson();
 
         weChatService.listeningInMsg();
 
@@ -84,11 +68,11 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
     @Override
     public String initializeWeChatInfo() {
 
-        weChatService.initializeweChat();
-
-        weChatService.wxStatusNotify();
-
-        weChatService.loadContactPerson();
+//        weChatService.initializeweChat();
+//
+//        weChatService.wxStatusNotify();
+//
+//        weChatService.loadContactPerson();
         return "success";
     }
 }

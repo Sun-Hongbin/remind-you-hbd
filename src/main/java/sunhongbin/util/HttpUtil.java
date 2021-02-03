@@ -60,7 +60,7 @@ public class HttpUtil {
 
             // 4、analysis whether the HTTP return code is 200
             if (response.getStatusLine().getStatusCode() == 200) {
-                LOG.info("Get method success");
+                LOG.debug("HttpUtil.doGet : success");
                 // parse message
                 // response.getEntity() output content: [Content-Type: text/javascript,Content-Length: 64,Chunked: false]
                 requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");

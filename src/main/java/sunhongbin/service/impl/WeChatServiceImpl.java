@@ -124,7 +124,7 @@ public class WeChatServiceImpl implements WeChatService {
     @Override
 
 
-    public void pollForScanRes(String uuid) {
+    public String pollForScanRes(String uuid) {
 
         Map<String, String> paramMap = new HashMap<>();
         // 参数tip : 1表示未扫描 0表示已扫描
@@ -165,14 +165,7 @@ public class WeChatServiceImpl implements WeChatService {
 
             LOG.error("HTTP 返回码：" + code);
         }
-
-        while (!StringUtils.equals(code, "200")) {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                LOG.error(e.getLocalizedMessage());
-            }
-        }
+        return code;
     }
 
     @Override
@@ -202,10 +195,11 @@ public class WeChatServiceImpl implements WeChatService {
 
         this.SyncKey = jsonRes.getJSONObject("SyncKey");
 
-        LOG.info("[SyncKey] " + SyncKey.toJSONString());
+        LOG.debug("[SyncKey] " + SyncKey.toJSONString());
 
         //TODO logger转前端
-        LOG.info("初始化成功，欢迎登陆!" + this.user.toString());
+        LOG.info("初始化成功，欢迎登陆!");
+        LOG.debug("用户信息：" + this.user.toString());
     }
 
     @Override
@@ -275,7 +269,7 @@ public class WeChatServiceImpl implements WeChatService {
                             // 自己不加载
                             && !StringUtils.equals(msg.getString("UserName"), user.getUserName())
                     ) {
-                        LOG.info("姓名：" + msg.getString("NickName") + "  个性签名：" + msg.getString("Signature"));
+//                        LOG.info("姓名：" + msg.getString("NickName") + "  个性签名：" + msg.getString("Signature"));
                         friendList.add(msg);
                         contactLst = friendList;
                     }
@@ -294,11 +288,9 @@ public class WeChatServiceImpl implements WeChatService {
 
         executorService.execute(() -> {
             while (true) {
+                // 监听消息时调用API返回的信息
                 int[] syncRes = syncCheck();
-                if (syncRes.length != 2) {
-                    LOG.error("接收错误");
-                    break;
-                }
+
                 if (syncRes[0] == SyncCheckRetCodeEnum.SUCCESS.getIndex()) {
                     if (syncRes[1] == SyncChecSelectorEnum.NEW_MSG.getIndex() || syncRes[1] == SyncChecSelectorEnum.ADD_OR_DEL_CONTACT.getIndex()) {
                         webwxSync();
@@ -313,8 +305,8 @@ public class WeChatServiceImpl implements WeChatService {
                         LOG.info(SyncChecSelectorEnum.MOD_CONTACT.getDesc());
                     }
                 } else {
-                    LOG.error("returnCode: " + SyncCheckRetCodeEnum.stateOf(syncRes[0]).getDesc() +
-                            " selector: " + SyncChecSelectorEnum.stateOf(syncRes[1]).getDesc());
+                    LOG.error("接收信息错误！ returnCode: " + Objects.requireNonNull(SyncCheckRetCodeEnum.stateOf(syncRes[0])).getDesc() +
+                                         " selector: " + Objects.requireNonNull(SyncChecSelectorEnum.stateOf(syncRes[1])).getDesc());
                     break;
                 }
 
@@ -329,6 +321,7 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     private int[] syncCheck() {
+
         String url = WeChatApi.SYNC_CHK.getUrl();
 
         Map<String, String> paramMap = new HashMap<>();
@@ -344,11 +337,16 @@ public class WeChatServiceImpl implements WeChatService {
         String response = HttpUtil.deGet(url, paramMap);
 
         JSONObject jsonRes = JSON.parseObject(response.substring(response.indexOf("{")));
-        int[] res = new int[2];
-        res[0] = jsonRes.getInteger("retcode");
-        res[1] = jsonRes.getInteger("selector");
-        return res;
+        if (jsonRes.size() != 2) {
+            throw new WeChatException(SYNC_CHK_EXCEPTION.getDesc() + jsonRes);
+        }
+        int[] syncRes = new int[2];
+        syncRes[0] = jsonRes.getInteger("retcode");
+        syncRes[1] = jsonRes.getInteger("selector");
 
+        LOG.debug("===>> 消息同步检查成功" + Arrays.toString(syncRes));
+
+        return syncRes;
     }
 
     private JSONObject webwxSync() {
@@ -418,7 +416,7 @@ public class WeChatServiceImpl implements WeChatService {
             throw new WeChatException(SND_MSG_EXCEPTION.getDesc(), e);
         }
 
-        LOG.info("[sendMsgToWeChatFriend] " + res);
+        LOG.debug("[sendMsgToWeChatFriend] " + res);
     }
 
     private void setGlobalParams(String requestRes) {

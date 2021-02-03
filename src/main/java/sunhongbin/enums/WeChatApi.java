@@ -41,8 +41,8 @@ public enum WeChatApi {
     GET_QR_CODE_WAY2("https://login.weixin.qq.com/l/"),
 
     /**
-     *     尝试登录。若此时用户手机已完成扫码并点击登录，则返回一个真正用于登录的url地址。
-     *     否则接口大概10s后返回未扫码或未登录的状态码
+     * 尝试登录。若此时用户手机已完成扫码并点击登录，则返回一个真正用于登录的url地址。
+     * 否则接口大概10s后返回未扫码或未登录的状态码
      */
     IS_SCAN_QR_CODE("https://login.weixin.qq.com/cgi-bin/mmwebwx-bin/login"),
 

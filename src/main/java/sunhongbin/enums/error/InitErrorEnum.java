@@ -35,6 +35,12 @@ public enum InitErrorEnum {
      */
     SND_MSG_EXCEPTION("发送信息异常"),
 
+    /**
+     * 同步消息异常
+     */
+    SYNC_CHK_EXCEPTION("同步消息异常")
+
+
     ;
     
     private final String desc;

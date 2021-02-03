@@ -95,7 +95,7 @@ public class LogAspect {
                     .apiName(theMethod)
                     .duration(duration)
                     .build();
-            LOG.info(systemLog.toString());
+            LOG.debug(systemLog.toString());
         }, executorService);
 
         // rethrow exception

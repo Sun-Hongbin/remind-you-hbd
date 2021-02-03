@@ -41,6 +41,14 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
 
         weChatService.showQRCode(uuid);
 
+        try {
+            while (!StringUtils.equals(weChatService.pollForScanRes(uuid), "200")){
+                Thread.sleep(2000);
+            }
+        } catch (InterruptedException e) {
+            LOG.error(e.getLocalizedMessage(), e);
+        }
+
         weChatService.pollForScanRes(uuid);
 
         // 登录成功后就把登录标志置为true

@@ -22,7 +22,7 @@ public interface WeChatService {
      * 3、Polling for scan results
      * check whether scan the QR code and press login button by polling
      */
-    void pollForScanRes(String uuid);
+    String pollForScanRes(String uuid);
 
     /**
      * 4、initialize weChat

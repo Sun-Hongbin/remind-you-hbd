@@ -5,6 +5,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import sunhongbin.annotation.RecordRequestLog;
+import sunhongbin.enums.RequestSourceEnum;
 import sunhongbin.service.LoginAndOutService;
 import sunhongbin.service.WeChatService;
 
@@ -26,6 +28,7 @@ public class WebController {
     private volatile static WebController instance = null;
 
     @GetMapping(value = "/login")
+    @RecordRequestLog(source = RequestSourceEnum.FRONT_END)
     public String doAiMan() throws Exception {
         String returnMsg = loginAndOutService.doLogin();
         System.out.println(returnMsg);

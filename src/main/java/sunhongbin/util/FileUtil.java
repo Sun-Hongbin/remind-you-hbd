@@ -4,6 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ResourceUtils;
+import sunhongbin.exception.WeChatException;
 
 import java.io.*;
 
@@ -75,24 +76,31 @@ public class FileUtil {
     /**
      * spring boot 获取static文件夹路径
      *
-     * @return
+     * @return D:/MyCode/remind-you-hbd/src/main/resources/static/image/qrCode.png
      */
     public static String getImageFilePath(String fileName) {
 
-        String path = "";
         try {
-            path = ResourceUtils.getURL("src/main/resources/static/image").getPath();
+            // 帮你补全image文件夹所在的完整路径【D:/MyCode/remind-you-hbd/src/main/resources/static/image】
+            String path = ResourceUtils.getURL("src/main/resources/static/image").getPath();
 
-            if (!StringUtils.isEmpty(fileName)) {
-                path = path.concat("/" + fileName);
+            // 判断文件夹是否不存在，不存在则创建文件夹
+            File directory = new File(path);
+            if (!directory.exists()) {
+                if (!directory.mkdirs()) {
+                    throw new WeChatException("创建文件夹失败，创建路径为：" + path);
+                }
             }
 
-            path = path.substring(1);
+            String filePath = path.concat("/" + fileName).substring(1);
 
-        } catch (FileNotFoundException fileNotFoundException) {
-            LOG.error(fileNotFoundException.getLocalizedMessage(), fileNotFoundException);
+            LOG.info("二维码生成路径为：" + filePath);
+
+            return filePath;
+
+        } catch (Exception e) {
+            throw new WeChatException(e.getMessage());
         }
-        return path;
     }
 
 

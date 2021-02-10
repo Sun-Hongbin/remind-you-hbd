@@ -92,7 +92,7 @@ public class FileUtil {
                 }
             }
 
-            String filePath = path.concat("/" + fileName).substring(1);
+            String filePath = path.concat(fileName).substring(1);
 
             LOG.info("二维码生成路径为：" + filePath);
 

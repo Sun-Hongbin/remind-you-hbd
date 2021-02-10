@@ -11,17 +11,12 @@ public enum InitErrorEnum {
     LOAD_CONTACT_PERSON_EXCEPTION("加载联系人异常"),
 
     /**
-     * [微信状态提醒] 开启失败
-     */
-    INIT_ERROR_STATUS_NOTIFY_FAILED("[微信状态提醒] 开启失败"),
-
-    /**
      * 加载联系人失败
      */
     LOAD_CONTACT_PERSON_FAILED("加载联系人失败"),
 
     /**
-     *
+     * 开启微信状态通知异常
      */
     WX_STATUS_NOTIFY_EXCEPTION("开启微信状态通知异常"),
 

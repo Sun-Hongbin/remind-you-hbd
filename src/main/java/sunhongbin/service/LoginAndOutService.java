@@ -5,7 +5,7 @@ package sunhongbin.service;
  */
 public interface LoginAndOutService {
 
-    String doLogin() throws Exception;
+    void doLogin() throws Exception;
 
     void doLogOut();
 

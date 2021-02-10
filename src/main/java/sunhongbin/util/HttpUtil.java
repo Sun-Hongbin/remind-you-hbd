@@ -1,29 +1,22 @@
 package sunhongbin.util;
 
 import com.alibaba.fastjson.JSONObject;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sunhongbin.exception.WeChatException;
 
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -34,78 +27,92 @@ public class HttpUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpUtil.class);
 
-    private static StringBuilder sessions = new StringBuilder();
+    private static String cookie = "";
 
-    public static String deGet(String url, Map<String, String> paramsMap) {
+    public static String doGet(String url) {
 
-        // 1、Create Http Client Object and Response Object
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-        CloseableHttpResponse response = null;
-        String requestResult = "";
+        StringBuilder result = new StringBuilder();
+
+        BufferedReader bufferedReader = null;
+
+        InputStream inputStream = null;
+
+        HttpURLConnection conn = null;
 
         try {
-            // 2、build URL and parameters to an URI
-            URIBuilder uriBuilder = new URIBuilder(url);
-            if (paramsMap != null) {
-                for (String paramKey : paramsMap.keySet()) {
-                    uriBuilder.addParameter(paramKey, paramsMap.get(paramKey));
-                }
+
+            URL xUrl = new URL(url);
+
+            conn = (HttpURLConnection) xUrl.openConnection();
+
+            // 设置请求方式
+            conn.setRequestMethod("GET");
+
+            // 设置连接主机服务器的超时时间
+            conn.setConnectTimeout(2000);
+
+            // 由于要一直监听是否二维码有被扫描。因此这里不设置读取远程返回的数据时间
+//            conn.setReadTimeout(2000);
+
+            // 设置通用的请求属性
+            conn.setRequestProperty("accept", "*/*");
+            conn.setRequestProperty("connection", "keep-alive");
+            conn.setRequestProperty("Content-Type", "text/plain; charset=utf-8");
+            if (!StringUtils.isEmpty(cookie)) {
+                conn.setRequestProperty("Cookie", cookie);
             }
-            URI uri = uriBuilder.build();
 
-            // 3、Get method
-            HttpGet httpGet = new HttpGet(uri);
+            // 发送请求
+            conn.connect();
 
-            response = httpClient.execute(httpGet);
+            // 获取所有响应头字段
+            Map<String, List<String>> map = conn.getHeaderFields();
 
-            // 4、analysis whether the HTTP return code is 200
-            if (response.getStatusLine().getStatusCode() == 200) {
-                LOG.debug("HttpUtil.doGet : success");
-                // parse message
-                // response.getEntity() output content: [Content-Type: text/javascript,Content-Length: 64,Chunked: false]
-                requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");
-            } else {
-                LOG.error("Get method failed");
+            // 遍历所有的响应头字段
+//            for (String key : map.keySet()) {
+//                LOG.info("doGet ===>> key: " + key + ", value: " + map.get(key));
+//            }
+
+            // 如果有cookie的话解析并保存
+            List<String> list = map.get("Set-Cookie");
+            if (list != null && list.size() != 0) {
+                StringBuilder stringBuilder = new StringBuilder();
+                for (String cookie : list) {
+                    stringBuilder.append(cookie, 0, cookie.indexOf(";") + 1);
+                }
+                HttpUtil.cookie = stringBuilder.toString();
+                LOG.info("cookie: " + cookie);
+            }
+
+            // 通过connection连接，获取输入流
+            if (conn.getResponseCode() == 200) {
+
+                inputStream = conn.getInputStream();
+                bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+
+                String line;
+                while ((line = bufferedReader.readLine()) != null) {
+                    result.append(line);
+                }
             }
         } catch (Exception e) {
-            LOG.error(e.getLocalizedMessage(), e);
+            throw new WeChatException(e.getMessage());
         } finally {
+            assert conn != null;
+            conn.disconnect();
             try {
-                if (response != null) {
-                    response.close();
+                if (bufferedReader != null) {
+                    bufferedReader.close();
                 }
-                httpClient.close();
-            } catch (IOException ioException) {
-                LOG.error(ioException.getLocalizedMessage(), ioException);
-            }
-        }
-
-        return requestResult;
-    }
-
-    public static String doGetGlobalParams(String uri) {
-
-        try {
-            URL url = new URL(uri);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestProperty("Cookie", sessions.toString());
-            connection.setRequestProperty("Connection", "keep-alive");
-            connection.connect();
-
-            List<String> list = connection.getHeaderFields().get("Set-Cookie");
-            if (list != null && list.size() != 0) {
-                for (String cookie : list) {
-                    sessions.append(cookie, 0, cookie.indexOf(";") + 1);
+                if (inputStream != null) {
+                    inputStream.close();
                 }
+            } catch (IOException e) {
+                LOG.error(e.getMessage());
             }
-            if (connection.getResponseCode() == 200) {
-                // 将InputStreamReader转化成byte[]
-                return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), StandardCharsets.UTF_8);
-            }
-        } catch (IOException ioException) {
-            LOG.error(ioException.getLocalizedMessage(), ioException);
+
         }
-        return "";
+        return result.toString();
     }
 
     public static File doGetFile(String url) {
@@ -134,7 +141,7 @@ public class HttpUtil {
                 file = FileUtil.translateInputStreamToFile(inputStream, "qrCode");
             }
         } catch (Exception e) {
-            LOG.error(e.getLocalizedMessage(), e);
+            throw new WeChatException(e.getMessage());
         } finally {
             try {
                 if (response != null) {
@@ -142,74 +149,32 @@ public class HttpUtil {
                 }
                 httpClient.close();
             } catch (IOException ioException) {
-                LOG.error(ioException.getLocalizedMessage(), ioException);
+                LOG.error(ioException.getMessage());
             }
         }
         return file;
     }
 
-    public static String doPost(String url, Map<String, String> paramsMap) {
-        // 1、Create Http Client Object and Response Object
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-        CloseableHttpResponse response = null;
-        String requestResult = "";
-
-        try {
-            // 2、create post
-            HttpPost httpPost = new HttpPost(url);
-
-            // 3、create params List
-            if (paramsMap != null) {
-                List<NameValuePair> paramsList = new ArrayList<>();
-                for (String paramKey : paramsMap.keySet()) {
-                    paramsList.add(new BasicNameValuePair(paramKey, paramsMap.get(paramKey)));
-                }
-                // 4、simulate from entity
-                UrlEncodedFormEntity encodedFormEntity = new UrlEncodedFormEntity(paramsList, "UTF-8");
-                httpPost.setEntity(encodedFormEntity);
-            }
-
-            // 5、execute post request
-            response = httpClient.execute(httpPost);
-
-            requestResult = EntityUtils.toString(response.getEntity(), "UTF-8");
-
-        } catch (Exception e) {
-            LOG.error(e.getLocalizedMessage(), e);
-        } finally {
-            try {
-                if (response != null) {
-                    response.close();
-                }
-                httpClient.close();
-            } catch (IOException ioException) {
-                LOG.error(ioException.getLocalizedMessage(), ioException);
-            }
-        }
-        return requestResult;
-    }
-
     /**
-     *
      * @param url
-     * @param jsonObject
-     * "DeviceID" -> "e878871051103203"
-     * "Skey" -> "@crypt_1af1bef4_ce420e20a91faba907fd24b254d414a0"
-     * "Uin" -> "1469893904"
-     * "Sid" -> "O0Uy9JLwXSVEFXY4"
+     * @param jsonObject "DeviceID" -> "e878871051103203"
+     *                   "Skey" -> "@crypt_1af1bef4_ce420e20a91faba907fd24b254d414a0"
+     *                   "Uin" -> "1469893904"
+     *                   "Sid" -> "O0Uy9JLwXSVEFXY4"
      * @return
      */
-    public static String doPost(String url, JSONObject jsonObject) throws IOException {
+    public static String doPost(String url, JSONObject jsonObject) {
 
-            URL urlEntity = new URL(url);
+        try {
+            URL xUrl = new URL(url);
 
-            HttpURLConnection connection = (HttpURLConnection)urlEntity.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) xUrl.openConnection();
 
             connection.setRequestMethod("POST");
 
-            connection.setRequestProperty("Cookie", sessions.toString());
+            connection.setRequestProperty("Cookie", cookie.toString());
             connection.setRequestProperty("Charset", "UTF-8");
-            connection.setRequestProperty("Content-Type","application/json;charset=UTF-8");
+            connection.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
 
             connection.setDoOutput(true);
             connection.setDoInput(true);
@@ -217,11 +182,8 @@ public class HttpUtil {
 
             connection.connect();
 
-            DataOutputStream outputStream =new DataOutputStream(connection.getOutputStream());
+            DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
 
-            /**
-             * {"BaseRequest":{"DeviceID":"e878871051103203","Skey":"@crypt_1af1bef4_ce420e20a91faba907fd24b254d414a0","Uin":"1469893904","Sid":"O0Uy9JLwXSVEFXY4"}}
-             */
             outputStream.write(jsonObject.toString().getBytes(StandardCharsets.UTF_8));
 
             outputStream.flush();
@@ -229,6 +191,10 @@ public class HttpUtil {
             outputStream.close();
 
             return new String(FileUtil.translateInputStreamToByte(connection.getInputStream()), StandardCharsets.UTF_8);
+
+        } catch (IOException e) {
+            throw new WeChatException(e.getMessage());
+        }
     }
 
 

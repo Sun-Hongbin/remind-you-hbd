@@ -53,14 +53,14 @@ public class LogAspect {
 
         // display the method we are calling
         String theMethod = joinPoint.getSignature().toLongString();
-        LOG.debug("=====>> Executing @Around on method: " + theMethod);
+        LOG.info("=====>> Executing @Around on method: " + theMethod);
 
         // get begin timestamp
         long begin = System.currentTimeMillis();
 
         // get the arguments
         Object[] args = joinPoint.getArgs();
-        LOG.debug("=====>> in @Around: argument: " + Arrays.toString(args));
+        LOG.info("=====>> in @Around: argument: " + Arrays.toString(args));
 
         // now, let's execute the method
         Object result = null;
@@ -77,7 +77,7 @@ public class LogAspect {
             // rethrow e
             exception = e;
         }
-        LOG.debug("=====>> in @Around: result: " + response);
+        LOG.info("=====>> in @Around: result: " + response);
 
         // get end timestamp
         long end = System.currentTimeMillis();
@@ -95,7 +95,7 @@ public class LogAspect {
                     .apiName(theMethod)
                     .duration(duration)
                     .build();
-            LOG.debug(systemLog.toString());
+            LOG.info(systemLog.toString());
         }, executorService);
 
         // rethrow exception

@@ -1,6 +1,6 @@
 package sunhongbin.service;
 
-import sunhongbin.enums.MemberTypeEnum;
+import sunhongbin.entity.GlobalParam;
 import sunhongbin.exception.WeChatException;
 
 /**
@@ -16,38 +16,37 @@ public interface WeChatService {
     /**
      * 2、show QR code
      */
-    void showQRCode(String uuid) throws WeChatException;
+    void showQRCode(String uuid);
 
     /**
      * 3、Polling for scan results
      * check whether scan the QR code and press login button by polling
      */
-    String pollForScanRes(String uuid);
+    GlobalParam pollForScanRes(String uuid);
 
     /**
      * 4、initialize weChat
      */
-    void initializeweChat();
+    String initializeWeChat(GlobalParam globalParam);
 
     /**
      * 5、WeChat Msg status notify
      */
-    void wxStatusNotify() throws WeChatException;
+    void wxStatusNotify(GlobalParam globalParam);
 
     /**
      * 5、load contact person
      */
-    void loadContactPerson() throws WeChatException;
+    void loadContactPerson(GlobalParam globalParam);
 
     /**
      * listening in message
      */
-    void listeningInMsg();
+    void listeningInMsg(GlobalParam globalParam, String syncKey);
 
     /**
      * send message
      */
-    void sendMsgToWeChatFriend(String msg, MemberTypeEnum toWho);
-
+    void sendMsgToWeChatFriend(String msg, String toWho, GlobalParam globalParam);
 
 }

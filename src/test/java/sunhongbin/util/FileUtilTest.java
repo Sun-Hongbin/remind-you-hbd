@@ -13,6 +13,6 @@ class FileUtilTest {
 
     @Test
     void getImageFilePath() {
-
+        System.out.println(System.currentTimeMillis());
     }
 }

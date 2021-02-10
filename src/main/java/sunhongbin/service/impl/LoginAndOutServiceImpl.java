@@ -1,10 +1,10 @@
 package sunhongbin.service.impl;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import sunhongbin.entity.GlobalParam;
 import sunhongbin.exception.WeChatException;
 import sunhongbin.service.LoginAndOutService;
 import sunhongbin.service.WeChatService;
@@ -28,44 +28,27 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
     private AtomicBoolean locked = new AtomicBoolean(false);
 
     @Override
-    public String doLogin() throws WeChatException {
+    public void doLogin() throws WeChatException {
 
         String uuid = weChatService.getUUID();
 
-        // release lock and remind the user to login again
-        if (StringUtils.isEmpty(uuid)) {
-            locked = new AtomicBoolean(false);
-            return "获取UUID失败，请重试登陆……";
-        }
-        LOG.info("获取得到UUID成功，UUID：" + uuid);
-
         weChatService.showQRCode(uuid);
 
-        try {
-            while (!StringUtils.equals(weChatService.pollForScanRes(uuid), "200")){
-                Thread.sleep(2000);
-            }
-        } catch (InterruptedException e) {
-            LOG.error(e.getLocalizedMessage(), e);
-        }
+        GlobalParam globalParam = weChatService.pollForScanRes(uuid);
 
-        weChatService.pollForScanRes(uuid);
-
-        // 登录成功后就把登录标志置为true
-        // 第一次登陆时，将 false 置为 true，在没注销之前再次请求 UUID 都不会成功
+        // 登录成功后就把登录标志置为true。第一次登陆时，将 false 置为 true，在没注销之前再次请求 UUID 都不会成功
         if (!locked.compareAndSet(false, true)) {
-            return "不可重复登陆微信！";
+            throw new WeChatException("不可重复登陆微信！");
         }
 
-        weChatService.initializeweChat();
+        String syncKey = weChatService.initializeWeChat(globalParam);
 
-        weChatService.wxStatusNotify();
+        weChatService.wxStatusNotify(globalParam);
 
-        weChatService.loadContactPerson();
+        weChatService.loadContactPerson(globalParam);
 
-        weChatService.listeningInMsg();
+        weChatService.listeningInMsg(globalParam, syncKey);
 
-        return "success";
     }
 
     @Override

@@ -15,7 +15,7 @@ public enum WeChatApi {
      * 说明：用于获取显示二维码以及登录所需的uuid，标识获取二维码和扫码的为同一个用户
      * 请求方式：GET
      */
-    GET_UUID("https://login.wx.qq.com/jslogin"),
+    GET_UUID("https://login.wx.qq.com/jslogin?appid=wx782c26e4c19acffb&redirect_uri=https%3A%2F%2Fwx.qq.com%2Fcgi-bin%2Fmmwebwx-bin%2Fwebwxnewloginpage&fun=new&lang=zh_CN"),
 
     /**
      * 2、获取登陆微信二维码方式1
@@ -43,8 +43,13 @@ public enum WeChatApi {
     /**
      * 尝试登录。若此时用户手机已完成扫码并点击登录，则返回一个真正用于登录的url地址。
      * 否则接口大概10s后返回未扫码或未登录的状态码
+     *
+     * response：
+     *  window.code 扫描结果，201表示扫描成功，200表示确认登录，还有一个408，表示超时（一直没有扫码）
+     *  window.userAvatar用户头像base64编码
+     *  window.redirect_uri获取初始化信息的重定向Url
      */
-    IS_SCAN_QR_CODE("https://login.weixin.qq.com/cgi-bin/mmwebwx-bin/login"),
+    IS_SCAN_QR_CODE("https://login.wx.qq.com/cgi-bin/mmwebwx-bin/login"),
 
     /**
      * 3、微信初始化
@@ -78,7 +83,7 @@ public enum WeChatApi {
      * 说明：同步消息检查。这里只做检查不做同步，如果检查出有新消息，再掉具体同步的接口。
      * 请求方式：POST
      */
-    SYNC_CHK("https://webpush2.weixin.qq.com/cgi-bin/mmwebwx-bin/synccheck"),
+    SYNC_CHK("https://webpush.wx.qq.com/cgi-bin/mmwebwx-bin/synccheck"),
 
     /**
      * 8、获取最新消息
@@ -96,7 +101,9 @@ public enum WeChatApi {
 
     SND_IMG_TO_SERVER("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxuploadmedia"),
 
-    SND_IMG("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsgimg");
+    SND_IMG("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsgimg"),
+
+    TU_LING_ROBOT("http://www.tuling123.com/openapi/api");
 
     private String url;
 }

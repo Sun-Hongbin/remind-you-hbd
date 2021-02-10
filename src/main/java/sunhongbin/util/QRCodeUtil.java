@@ -3,11 +3,11 @@ package sunhongbin.util;
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
+import sunhongbin.exception.WeChatException;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.util.Map;
 /**
  * Created by Administrator on 2018/11/8 0008.
@@ -21,23 +21,25 @@ public class QRCodeUtil {
      * @param hintMap 谷歌二维码工具 ZXING 的属性配置
      * @return
      */
-    public static String translateFileToQrContent(File qrCodeFile, Map hintMap) throws IOException, NotFoundException {
+    public static String translateFileToQrContent(File qrCodeFile, Map hintMap) {
+        try {
+            // 读取文件
+            BufferedImage bufferedImage = ImageIO.read(qrCodeFile);
 
-        // 读取文件
-        BufferedImage bufferedImage = ImageIO.read(qrCodeFile);
+            LuminanceSource source = new BufferedImageLuminanceSource(bufferedImage);
 
-        LuminanceSource source = new BufferedImageLuminanceSource(bufferedImage);
+            Binarizer binarizer = new HybridBinarizer(source);
 
-        Binarizer binarizer = new HybridBinarizer(source);
+            BinaryBitmap binaryBitmap = new BinaryBitmap(binarizer);
 
-        BinaryBitmap binaryBitmap = new BinaryBitmap(binarizer);
+            MultiFormatReader reader = new MultiFormatReader();
 
-        MultiFormatReader reader = new MultiFormatReader();
+            Result result = reader.decode(binaryBitmap, hintMap);
 
-        Result result = reader.decode(binaryBitmap, hintMap);
-
-        return result.getText();
+            return result.getText();
+        } catch (Exception e) {
+            throw new WeChatException("translateFileToQrContent: " + e.getMessage());
+        }
     }
-
 
 }

@@ -3,7 +3,6 @@ package sunhongbin.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Service;
 import sunhongbin.entity.BaseRequest;
 import sunhongbin.entity.GlobalParam;
 import sunhongbin.entity.User;
-import sunhongbin.enums.QrCodeProperties;
 import sunhongbin.enums.SyncChecSelectorEnum;
 import sunhongbin.enums.SyncCheckRetCodeEnum;
 import sunhongbin.enums.WeChatApi;
@@ -31,6 +29,9 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.zxing.BarcodeFormat.QR_CODE;
+import static sunhongbin.enums.QrCodeProperties.QR_CODE_HEIGHT;
+import static sunhongbin.enums.QrCodeProperties.QR_CODE_WIDTH;
 import static sunhongbin.enums.error.InitErrorEnum.*;
 
 /**
@@ -89,26 +90,28 @@ public class WeChatServiceImpl implements WeChatService {
         Map<EncodeHintType, Object> hintMap = new EnumMap<>(EncodeHintType.class);
 
         hintMap.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+
         //默认的容错级别是L,代码中注释是7，设置成M/H的话二维码就越长了
         hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
+
         // 二维码四周的边缘大小，值设置的越大，边缘一圈就越厚
         hintMap.put(EncodeHintType.MARGIN, 1);
 
-        try {
-            // qrContent: // https://login.weixin.qq.com/l/IYGBnzQjqA==
-            String qrContent = QRCodeUtil.translateFileToQrContent(file, hintMap);
+        // qrContent: // https://login.weixin.qq.com/l/IYGBnzQjqA==
+        String qrContent = QRCodeUtil.translateFileToQrContent(file, hintMap);
 
-            // encode file to bit matrix
-            QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE,
-                    QrCodeProperties.QR_CODE_WIDTH.getValue(),
-                    QrCodeProperties.QR_CODE_HEIGHT.getValue(), hintMap);
+        // encode file to bit matrix
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+
+        try {
+            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, QR_CODE, QR_CODE_WIDTH.getValue(), QR_CODE_HEIGHT.getValue(), hintMap);
 
             // translate into qrCode.png
             Path path = new File(FileUtil.getImageFilePath("qrCode.png")).toPath();
+
             MatrixToImageWriter.writeToPath(bitMatrix, "png", path);
         } catch (Exception e) {
-            throw new WeChatException("二维码获取失败: " + e.getMessage());
+            throw new WeChatException("二维码获取时发生异常: " + e.getMessage());
         }
         LOG.info("二维码获取成功！已保存到本地！");
     }
@@ -181,7 +184,7 @@ public class WeChatServiceImpl implements WeChatService {
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < list.size(); i++) {
             // {"Val":723272423,"Key":1}
-            JSONObject object =list.getJSONObject(i);
+            JSONObject object = list.getJSONObject(i);
             stringBuilder.append("|").append(object.getString("Key")).append("_").append(object.getString("Val"));
         }
         LOG.info("⭐⭐初始化成功，欢迎登陆!");
@@ -377,7 +380,6 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     /**
-     *
      * @param redirectUrl https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxnewloginpage?ticket=AbeQzZc-rAs5OpooVWUiwH3p@qrticket_0&uuid=4Z7BYUaK3g==&lang=zh_CN&scan=1612949076"
      * @return
      */

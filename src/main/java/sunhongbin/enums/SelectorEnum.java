@@ -7,7 +7,7 @@ import lombok.Getter;
  * created by SunHongbin on 2020/9/14
  */
 @Getter
-public enum  SyncChecSelectorEnum {
+public enum SelectorEnum {
 
     /**
      * 成功
@@ -30,7 +30,7 @@ public enum  SyncChecSelectorEnum {
     ADD_OR_DEL_CONTACT(6, "存在删除或者新增的好友信息"),
 
     /**
-     * 进入或离开聊天界面
+     * 手机操作了微信，比如进入或离开聊天界面
      */
     ENTER_OR_LEAVE_CHAT(7, "进入或离开聊天界面");
 
@@ -38,13 +38,13 @@ public enum  SyncChecSelectorEnum {
 
     private String desc;
 
-    SyncChecSelectorEnum(int index, String desc) {
+    SelectorEnum(int index, String desc) {
         this.index = index;
         this.desc = desc;
     }
 
-    public static SyncChecSelectorEnum stateOf(int index) {
-        for (SyncChecSelectorEnum selectorEnum : values()) {
+    public static SelectorEnum stateOf(int index) {
+        for (SelectorEnum selectorEnum : values()) {
             if (selectorEnum.getIndex() == index) {
                 return selectorEnum;
             }

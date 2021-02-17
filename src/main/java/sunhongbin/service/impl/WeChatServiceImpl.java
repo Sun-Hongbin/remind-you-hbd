@@ -16,10 +16,11 @@ import org.springframework.stereotype.Service;
 import sunhongbin.entity.BaseRequest;
 import sunhongbin.entity.GlobalParam;
 import sunhongbin.entity.User;
-import sunhongbin.enums.SyncChecSelectorEnum;
-import sunhongbin.enums.SyncCheckRetCodeEnum;
+import sunhongbin.enums.SelectorEnum;
+import sunhongbin.enums.RetCodeEnum;
 import sunhongbin.enums.WeChatApi;
 import sunhongbin.exception.WeChatException;
+import sunhongbin.service.SmartRobotService;
 import sunhongbin.service.WeChatService;
 import sunhongbin.util.*;
 
@@ -45,9 +46,14 @@ public class WeChatServiceImpl implements WeChatService {
     @Autowired
     private ExecutorService executorService;
 
+    @Autowired
+    private SmartRobotService smartRobotService;
+
     private BaseRequest baseRequest;
 
-    private JSONArray contactLst;
+    private JSONArray contactList;
+
+    private String syncKey;
 
     private User user;
 
@@ -129,6 +135,7 @@ public class WeChatServiceImpl implements WeChatService {
             // 参数tip : 1表示未扫描 0表示已扫描
             // window.code=200;window.redirect_uri="https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxnewloginpage?ticket=AbeQzZc-rAs5OpooVWUiwH3p@qrticket_0&uuid=4Z7BYUaK3g==&lang=zh_CN&scan=1612949076";
             String url = WeChatApi.IS_SCAN_QR_CODE.getUrl() + "?uuid=" + uuid + "&tip=1&r=" + System.currentTimeMillis() + "&_=" + System.currentTimeMillis();
+
             String isScanQrCodeRes = HttpUtil.doGet(url);
 
             if (StringUtils.isEmpty(isScanQrCodeRes)) {
@@ -163,7 +170,7 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     @Override
-    public String initializeWeChat(GlobalParam globalParam) {
+    public void initializeWeChat(GlobalParam globalParam) {
 
         LOG.info("开始初始化微信……");
 
@@ -179,15 +186,22 @@ public class WeChatServiceImpl implements WeChatService {
 
         this.user = new User(user);
 
+        this.syncKey = getSyncKey(jsonRes);
+
+        LOG.info("⭐⭐初始化成功，欢迎登陆!");
+    }
+
+    private String getSyncKey(JSONObject jsonRes) {
         // {"List":[{"Val":723272423,"Key":1},{"Val":723273065,"Key":2},{"Val":723273028,"Key":3},{"Val":1612955521,"Key":1000}],"Count":4}
         JSONArray list = jsonRes.getJSONObject("SyncKey").getJSONArray("List");
+
         StringBuilder stringBuilder = new StringBuilder();
+
         for (int i = 0; i < list.size(); i++) {
             // {"Val":723272423,"Key":1}
             JSONObject object = list.getJSONObject(i);
             stringBuilder.append("|").append(object.getString("Key")).append("_").append(object.getString("Val"));
         }
-        LOG.info("⭐⭐初始化成功，欢迎登陆!");
 
         return stringBuilder.substring(1);
     }
@@ -253,10 +267,10 @@ public class WeChatServiceImpl implements WeChatService {
                     ) {
 //                        LOG.info("姓名：" + msg.getString("NickName") + "  个性签名：" + msg.getString("Signature"));
                         friendList.add(msg);
-                        contactLst = friendList;
                     }
+                    contactList = friendList;
                 });
-                LOG.info("联系人加载成功！共有联系人数量：" + contactLst.size());
+                LOG.info("联系人加载成功！共有联系人数量：" + contactList.size());
             }
         } else {
             throw new WeChatException(LOAD_CONTACT_PERSON_FAILED.getDesc() + "：返回码不等于0");
@@ -264,45 +278,102 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
     @Override
-    public void listeningInMsg(GlobalParam globalParam, String syncKey) {
+    public void listeningInMsg(GlobalParam globalParam) {
 
         LOG.info("开始监听消息……");
 
         executorService.execute(() -> {
             while (true) {
                 // 监听消息时调用API返回的信息
-                int[] syncRes = syncCheck(globalParam, syncKey);
+                int[] syncRes = syncCheck(globalParam);
 
-                if (syncRes[0] == SyncCheckRetCodeEnum.SUCCESS.getIndex()) {
-                    if (syncRes[1] == SyncChecSelectorEnum.NEW_MSG.getIndex() || syncRes[1] == SyncChecSelectorEnum.ADD_OR_DEL_CONTACT.getIndex()) {
-                        String msg = webwxSync(globalParam, syncKey);
-                        sendMsgToWeChatFriend(msg, sendToGroup, globalParam);
-                    } else if (syncRes[1] == SyncChecSelectorEnum.NORMAL.getIndex()) {
-                        try {
-                            TimeUnit.MILLISECONDS.sleep(100);
-                        } catch (InterruptedException e) {
-                            LOG.error(e.getLocalizedMessage());
-                        }
-                    } else if (syncRes[1] == SyncChecSelectorEnum.MOD_CONTACT.getIndex()) {
-                        LOG.info(SyncChecSelectorEnum.MOD_CONTACT.getDesc());
+                if (syncRes[0] == RetCodeEnum.SUCCESS.getIndex()) {
+                    if (syncRes[1] == SelectorEnum.NEW_MSG.getIndex()) {
+                        JSONObject msg = webwxSync(globalParam);
+                        handleMsg(msg, globalParam);
+                    }
+                    if (syncRes[1] == SelectorEnum.NORMAL.getIndex()) {
+                       LOG.info("成功");
+                    }
+                    if (syncRes[1] == SelectorEnum.ADD_OR_DEL_CONTACT.getIndex()) {
+                        LOG.info("存在删除或者新增的好友信息");
+                    }
+                    if (syncRes[1] == SelectorEnum.MOD_CONTACT.getIndex()) {
+                        LOG.info(SelectorEnum.MOD_CONTACT.getDesc());
+                    }
+                    try {
+                        TimeUnit.SECONDS.sleep(1);
+                    } catch (InterruptedException e) {
+                        LOG.error(e.getLocalizedMessage());
                     }
                 } else {
-                    LOG.error("接收信息错误！ returnCode: " + Objects.requireNonNull(SyncCheckRetCodeEnum.stateOf(syncRes[0])).getDesc() +
-                            " selector: " + Objects.requireNonNull(SyncChecSelectorEnum.stateOf(syncRes[1])).getDesc());
+                    LOG.error("接收信息错误！ returnCode: " + Objects.requireNonNull(RetCodeEnum.stateOf(syncRes[0])).getDesc() +
+                            " selector: " + Objects.requireNonNull(SelectorEnum.stateOf(syncRes[1])).getDesc());
                     break;
                 }
 
             }
         });
-
-        // 1、chk msg
-
-        // 2、if data, sync msg
-
-        // 3、handle msg and send Msg To WeChat Friend
     }
 
-    private int[] syncCheck(GlobalParam globalParam, String syncKey) {
+    private void handleMsg(JSONObject data, GlobalParam globalParam) {
+        if (data == null) {
+            return;
+        }
+        JSONArray AddMsgList = data.getJSONArray("AddMsgList");
+
+        for (Object obj : AddMsgList) {
+            JSONObject msg = (JSONObject) obj;
+            // MsgType 说明
+            // 1 文本消息; 3 图片消息;  34 语音消息; 37 VERIFYMSG; 40 POSSIBLEFRIEND_MSG
+            // 42 共享名片; 43 视频通话消息; 47 动画表情; 48 位置消息; 49 分享链接
+            // 50 VOIPMSG; 51 微信初始化消息; 52 VOIPNOTIFY; 53 VOIPINVITE; 62 小视频
+            // 9999  SYSNOTICE; 10000  系统消息; 10002  撤回消息
+            int msgType = msg.getInteger("MsgType");
+
+            switch (msgType) {
+                case 1:
+                    // 获取发送者发送的内容
+                    String content = msg.getString("Content");
+                    LOG.info("接收到微信消息: " + content);
+
+                    // 拿到群组的微信名以刷新缓存（有备注取备注，没备注取本名）
+                    if (StringUtils.equals(getContactName(msg.getString("FromUserName")), "还是骚年")) {
+                        this.sendToGroup = msg.getString("FromUserName");
+                    }
+
+                    // 发送给智能机器人并获取回复
+                    String reply = "";
+                    String[] contentArray = content.split(":<br/>");
+                    if (contentArray.length == 2) {
+                        content = contentArray[1].replace("孙鸿滨", "");
+                        reply = smartRobotService.aiReply(content);
+                    } else {
+                        reply = "请@我然后加上你想对我说的话呀~";
+                    }
+
+                    // 调用发送信息的接口
+                    sendMsgToWeChatFriend(reply, sendToGroup, globalParam);
+                    break;
+                case 3:
+                    LOG.info("接收到微信图片！");
+                    break;
+                case 34:
+                    LOG.info("接收到微信语音！");
+                    break;
+                case 42:
+                    LOG.info("接收到微信名片！");
+                    break;
+                case 51:
+                    LOG.info("成功截获微信初始化消息！");
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    private int[] syncCheck(GlobalParam globalParam) {
 
         String url = WeChatApi.SYNC_CHK.getUrl()
                 + "?r=" + System.currentTimeMillis()
@@ -313,7 +384,7 @@ public class WeChatServiceImpl implements WeChatService {
                 + "&synckey=" + syncKey
                 + "&_=" + System.currentTimeMillis();
 
-        // window.synccheck={retcode:"1100",selector:"0"}
+        // window.synccheck={retcode:"0",selector:"2"}
         String syncCheckRes = HttpUtil.doGet(url);
 
         JSONObject jsonRes = JSON.parseObject(syncCheckRes.substring(syncCheckRes.indexOf("{")));
@@ -324,12 +395,12 @@ public class WeChatServiceImpl implements WeChatService {
         syncRes[0] = jsonRes.getInteger("retcode");
         syncRes[1] = jsonRes.getInteger("selector");
 
-        LOG.info("===>> 消息同步检查成功" + Arrays.toString(syncRes));
+        LOG.info("消息同步检查成功" + Arrays.toString(syncRes));
 
         return syncRes;
     }
 
-    private String webwxSync(GlobalParam globalParam, String syncKey) {
+    private JSONObject webwxSync(GlobalParam globalParam) {
         String url = WeChatApi.SYNC_MSG.getUrl()
                 + "?lang=zh_CN"
                 + "&pass_ticket=" + globalParam.getPass_ticket()
@@ -344,21 +415,21 @@ public class WeChatServiceImpl implements WeChatService {
 
         String response = HttpUtil.doPost(url, paramJon);
 
-        JSONObject jsonObject = JSON.parseObject(response);
-        if (jsonObject != null) {
+        if (StringUtils.isNotEmpty(response)) {
+
+            JSONObject jsonObject = JSON.parseObject(response);
+
             String ret = jsonObject.getString("Ret");
             if (StringUtils.equals(ret, "0")) {
-                syncKey = jsonObject.getJSONObject("SyncKey").toString();
-
-
+                this.syncKey = getSyncKey(jsonObject);
+                return jsonObject;
             }
         }
         return null;
     }
 
     @Override
-    public void sendMsgToWeChatFriend(String msg, String toWho, GlobalParam globalParam) {
-
+    public void sendMsgToWeChatFriend(String msg, String target, GlobalParam globalParam) {
         String url = WeChatApi.SND_MSG + "?lang=zh_CN&?pass_ticket=" + globalParam.getPass_ticket();
 
         JSONObject paramJson = new JSONObject();
@@ -367,7 +438,7 @@ public class WeChatServiceImpl implements WeChatService {
         MsgJson.put("Type", 1);
         MsgJson.put("Content", msg);
         MsgJson.put("FromUserName", user.getUserName());
-        MsgJson.put("ToUserName", toWho);
+        MsgJson.put("ToUserName", target);
         MsgJson.put("LocalID", id);
         MsgJson.put("ClientMsgId", id);
 
@@ -402,24 +473,45 @@ public class WeChatServiceImpl implements WeChatService {
                 String message = getBaseReqRes.substring(getBaseReqRes.indexOf("<message>") + "<message>".length(), getBaseReqRes.indexOf("</message>"));
                 throw new WeChatException(message);
             }
-            globalParam.setSkey(getBaseReqRes.substring(getBaseReqRes.indexOf("<skey>") + "<skey>".length(), getBaseReqRes.indexOf("</skey>")));
-            globalParam.setWxsid(getBaseReqRes.substring(getBaseReqRes.indexOf("<wxsid>") + "<wxsid>".length(), getBaseReqRes.indexOf("</wxsid>")));
-            globalParam.setWxuin(getBaseReqRes.substring(getBaseReqRes.indexOf("<wxuin>") + "<wxuin>".length(), getBaseReqRes.indexOf("</wxuin>")));
-            globalParam.setPass_ticket(getBaseReqRes.substring(getBaseReqRes.indexOf("<pass_ticket>") + "<pass_ticket>".length(), getBaseReqRes.indexOf("</pass_ticket>")));
-        }
-
-        if (globalParam != null) {
             this.baseRequest = new BaseRequest();
-            baseRequest.setSkey(globalParam.getSkey());
-            baseRequest.setSid(globalParam.getWxsid());
-            baseRequest.setUin(globalParam.getWxuin());
+
+            String skey = getBaseReqRes.substring(getBaseReqRes.indexOf("<skey>") + "<skey>".length(), getBaseReqRes.indexOf("</skey>"));
+            globalParam.setSkey(skey);
+            baseRequest.setSkey(skey);
+
+            String sid = getBaseReqRes.substring(getBaseReqRes.indexOf("<wxsid>") + "<wxsid>".length(), getBaseReqRes.indexOf("</wxsid>"));
+            globalParam.setWxsid(sid);
+            baseRequest.setSid(sid);
+
+            String uin = getBaseReqRes.substring(getBaseReqRes.indexOf("<wxuin>") + "<wxuin>".length(), getBaseReqRes.indexOf("</wxuin>"));
+            globalParam.setWxuin(uin);
+            baseRequest.setUin(uin);
+
+            globalParam.setPass_ticket(getBaseReqRes.substring(getBaseReqRes.indexOf("<pass_ticket>") + "<pass_ticket>".length(), getBaseReqRes.indexOf("</pass_ticket>")));
+
             baseRequest.setDeviceID("e" + String.valueOf(new Random().nextLong()).substring(1, 16));
-        } else {
-            throw new WeChatException("全局参数为空");
         }
 
         return globalParam;
     }
 
+    private String getContactName(String fromUserName) {
 
+        for (Object contact : contactList) {
+
+            JSONObject info = (JSONObject) contact;
+
+            if (info.getString("UserName").equals(fromUserName)) {
+                // 备注名
+                String nickName = info.getString("RemarkName");
+                if (StringUtils.isNotEmpty(nickName)) {
+                    return nickName;
+                }
+                // 如果好友未备注就返回原本的名字
+                return info.getString("NickName");
+            }
+        }
+
+        return null;
+    }
 }

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import sunhongbin.enums.WeChatApi;
 import sunhongbin.service.SmartRobotService;
 import sunhongbin.service.WeChatService;
+import sunhongbin.util.DateUtil;
 import sunhongbin.util.HttpUtil;
 
 import javax.annotation.Resource;
@@ -39,14 +40,11 @@ public class SmartRobotServiceImpl implements SmartRobotService {
     @Override
     @Scheduled(cron = "${schedule.satisfy.drinkWater}")
     public void notifyDrinkWater() {
-/*
-        LOG.info("------------定时喝水提醒------------");
 
-        String msg = "现在是：" + DateUtil.getCurrentTime("HH时mm分") + "，别忘了一天3L水的小目标噢~";
+        String msg = "现在是：" + DateUtil.getCurrentTime("HH时mm分") + "，别忘了一天2L水的小目标噢~";
 
 
-        weChatService.sendMsgToWeChatFriend(msg, MemberTypeEnum.GROUP);
-        LOG.info("------------定时喝水提醒执行完毕------------");*/
+//        weChatService.sendMsgToWeChatFriend(msg, MemberTypeEnum.GROUP);
     }
 }
 

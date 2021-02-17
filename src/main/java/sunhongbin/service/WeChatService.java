@@ -1,5 +1,6 @@
 package sunhongbin.service;
 
+import com.alibaba.fastjson.JSONObject;
 import sunhongbin.entity.GlobalParam;
 import sunhongbin.exception.WeChatException;
 
@@ -27,7 +28,7 @@ public interface WeChatService {
     /**
      * 4、initialize weChat
      */
-    String initializeWeChat(GlobalParam globalParam);
+    void initializeWeChat(GlobalParam globalParam);
 
     /**
      * 5、WeChat Msg status notify
@@ -42,7 +43,7 @@ public interface WeChatService {
     /**
      * listening in message
      */
-    void listeningInMsg(GlobalParam globalParam, String syncKey);
+    void listeningInMsg(GlobalParam globalParam);
 
     /**
      * send message

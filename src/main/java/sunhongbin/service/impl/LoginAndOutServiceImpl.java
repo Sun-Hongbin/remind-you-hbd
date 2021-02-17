@@ -41,13 +41,13 @@ public class LoginAndOutServiceImpl implements LoginAndOutService {
             throw new WeChatException("不可重复登陆微信！");
         }
 
-        String syncKey = weChatService.initializeWeChat(globalParam);
+        weChatService.initializeWeChat(globalParam);
 
         weChatService.wxStatusNotify(globalParam);
 
         weChatService.loadContactPerson(globalParam);
 
-        weChatService.listeningInMsg(globalParam, syncKey);
+        weChatService.listeningInMsg(globalParam);
 
     }
 

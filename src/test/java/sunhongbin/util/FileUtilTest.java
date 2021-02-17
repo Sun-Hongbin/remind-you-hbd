@@ -13,6 +13,17 @@ class FileUtilTest {
 
     @Test
     void getImageFilePath() {
-        System.out.println(System.currentTimeMillis());
+
+        String str = "str";
+
+        trans(str);
+
+        System.out.println(str);
+    }
+
+    private void trans(String str) {
+        str = "new Str";
+
+        System.out.println(str);
     }
 }

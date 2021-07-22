@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;
 import sunhongbin.entity.BaseRequest;
 import sunhongbin.entity.GlobalParam;
 import sunhongbin.entity.User;
-import sunhongbin.enums.SelectorEnum;
 import sunhongbin.enums.RetCodeEnum;
+import sunhongbin.enums.SelectorEnum;
 import sunhongbin.enums.WeChatApi;
 import sunhongbin.exception.WeChatException;
 import sunhongbin.service.SmartRobotService;
@@ -31,8 +31,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.zxing.BarcodeFormat.QR_CODE;
-import static sunhongbin.enums.QrCodeProperties.QR_CODE_HEIGHT;
-import static sunhongbin.enums.QrCodeProperties.QR_CODE_WIDTH;
 import static sunhongbin.enums.error.InitErrorEnum.*;
 
 /**
@@ -42,6 +40,16 @@ import static sunhongbin.enums.error.InitErrorEnum.*;
 public class WeChatServiceImpl implements WeChatService {
 
     private static final Logger LOG = LoggerFactory.getLogger(WeChatServiceImpl.class);
+    /**
+     * CODE_WIDTH：二维码宽度，单位像素
+     * CODE_HEIGHT：二维码高度，单位像素
+     * FRONT_COLOR：二维码前景色，0x000000 表示黑色
+     * BACKGROUND_COLOR：二维码背景色，0xFFFFFF 表示白色
+     * 演示用 16 进制表示，和前端页面 CSS 的取色是一样的，注意前后景颜色应该对比明显，如常见的黑白
+     */
+    private static final int QR_CODE_WIDTH = 200;
+
+    private static final int QR_CODE_HEIGHT = 200;
 
     @Autowired
     private ExecutorService executorService;
@@ -110,7 +118,7 @@ public class WeChatServiceImpl implements WeChatService {
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
 
         try {
-            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, QR_CODE, QR_CODE_WIDTH.getValue(), QR_CODE_HEIGHT.getValue(), hintMap);
+            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, QR_CODE, QR_CODE_WIDTH, QR_CODE_HEIGHT, hintMap);
 
             // translate into qrCode.png
             Path path = new File(FileUtil.getImageFilePath("qrCode.png")).toPath();
@@ -343,7 +351,7 @@ public class WeChatServiceImpl implements WeChatService {
                     }
 
                     // 发送给智能机器人并获取回复
-                    String reply = "";
+                    String reply;
                     String[] contentArray = content.split(":<br/>");
                     if (contentArray.length == 2) {
                         content = contentArray[1].replace("孙鸿滨", "");

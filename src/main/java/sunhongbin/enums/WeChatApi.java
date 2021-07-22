@@ -105,5 +105,5 @@ public enum WeChatApi {
 
     TU_LING_ROBOT("http://www.tuling123.com/openapi/api");
 
-    private String url;
+    private final String url;
 }

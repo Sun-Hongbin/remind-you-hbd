@@ -25,9 +25,9 @@ public enum RetCodeEnum {
 
     TOO_OFTEN(1205, "操作频繁");
 
-    private int index;
+    private final int index;
 
-    private String desc;
+    private final String desc;
 
     RetCodeEnum(int index, String desc) {
         this.index = index;

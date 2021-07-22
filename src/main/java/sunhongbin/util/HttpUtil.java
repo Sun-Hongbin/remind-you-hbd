@@ -172,7 +172,7 @@ public class HttpUtil {
 
             connection.setRequestMethod("POST");
 
-            connection.setRequestProperty("Cookie", cookie.toString());
+            connection.setRequestProperty("Cookie", cookie);
             connection.setRequestProperty("Charset", "UTF-8");
             connection.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
 

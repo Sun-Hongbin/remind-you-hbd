@@ -16,13 +16,13 @@ class FileUtilTest {
 
         String str = "str";
 
-        trans(str);
+        trans();
 
         System.out.println(str);
     }
 
-    private void trans(String str) {
-        str = "new Str";
+    private void trans() {
+        String str = "new Str";
 
         System.out.println(str);
     }

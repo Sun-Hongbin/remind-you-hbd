@@ -1,6 +1,5 @@
 package sunhongbin.service;
 
-import com.alibaba.fastjson.JSONObject;
 import sunhongbin.entity.GlobalParam;
 import sunhongbin.exception.WeChatException;
 

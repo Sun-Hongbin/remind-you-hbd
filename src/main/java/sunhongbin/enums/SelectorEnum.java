@@ -34,9 +34,9 @@ public enum SelectorEnum {
      */
     ENTER_OR_LEAVE_CHAT(7, "进入或离开聊天界面");
 
-    private int index;
+    private final int index;
 
-    private String desc;
+    private final String desc;
 
     SelectorEnum(int index, String desc) {
         this.index = index;

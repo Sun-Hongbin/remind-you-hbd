@@ -2,8 +2,6 @@ package sunhongbin.entity;
 
 import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * created by SunHongbin on 2020/5/4

@@ -8,7 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class RemindYouBabyApplicationTests {
 
-	private Logger logger = LoggerFactory.getLogger(getClass());
+	private static final Logger logger = LoggerFactory.getLogger(RemindYouBabyApplicationTests.class);
 
 	@Test
 	void logTest() {

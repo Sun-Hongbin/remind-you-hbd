@@ -64,7 +64,7 @@ public class LogAspect {
 
         // now, let's execute the method
         Object result = null;
-        String response = null;
+        String response;
         Exception exception = null;
         try {
             result = joinPoint.proceed();
